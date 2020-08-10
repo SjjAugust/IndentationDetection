@@ -4,7 +4,8 @@
 
 #include "EdgeDetector.h"
 
-EdgeDetector::EdgeDetector(const cv::Mat& input_pic){
+EdgeDetector::EdgeDetector(const cv::Mat& input_pic, int bin_threshold)
+: BINARYZATION_THRESHOLD(bin_threshold){
     ori_pic_ = input_pic.clone();
 }
 
@@ -28,9 +29,9 @@ cv::Mat EdgeDetector::detectEdge() {
     cv::bitwise_not(dst_pic_, dst_pic_);
     imfill(dst_pic_);
     cv::imwrite("../pic/step3.jpg", dst_pic_);
-    cv::namedWindow("x", 0);
-    cv::imshow("x", dst_pic_);
-    cv::waitKey(0);
+    // cv::namedWindow("x", 0);
+    // cv::imshow("x", dst_pic_);
+    // cv::waitKey(0);
     return dst_pic_.clone();
 }
 
@@ -66,7 +67,7 @@ double EdgeDetector::calPointToLineDistance(const cv::Point &p0, const cv::Point
 
 cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, int hole_num, std::vector<double>& radius, std::vector<cv::Point>& center_vec) {
     //预处理，灰度化，中值滤波
-    preProcess(gauss_kernel_size);
+    preProcess( );
     //二值化，填充孔洞
     cv::Mat bin_mat = detectEdge();
     //找到所有轮廓
@@ -107,10 +108,24 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
             continue;
         }
         cv::drawContours(bin_canvas, all_contours_vec, area[i]["idx"], cv::Scalar(0 ,0 , 255), 3);
-        cv::RotatedRect rrt = cv::fitEllipse(all_contours_vec[area[i]["idx"]]);
+        cv::RotatedRect rrt = cv::fitEllipse(all_contours_vec[area[i]["idx"]]);  
         double axis1 = rrt.size.width, axis2 = rrt.size.height;
         double r = (axis1 + axis2) / 4;
         cv::Point center = rrt.center;
+
+        cv::Mat canvas_temp = cv::Mat::zeros(bin_mat.size(), bin_mat.type());
+        std::vector<cv::Point> aft_contour;
+        cv::circle(canvas_temp, center, r, cv::Scalar(255), 1);
+        for(int i = 0; i < canvas_temp.rows; i++){
+            for(int j = 0; j < canvas_temp.cols; j++){
+                if(canvas_temp.at<uchar>(i, j) == 255){
+                    aft_contour.emplace_back(cv::Point(j, i));
+                }
+            }
+        }
+        Goodness goodness = calGoodnessOfFit(all_contours_vec[area[i]["idx"]], aft_contour);
+        std::cout << "sum distance:" << goodness.sum_distance << std::endl << "rate:" << goodness.rate << std::endl;
+
         cv::circle(canvas, center, r, cv::Scalar(255, 0, 0), 3);
         cv::circle(ret, center, (int)r, cv::Scalar(0, 0, 255), 3);
 //        cv::ellipse(ret, rrt, cv::Scalar(0 ,0 ,255), 1);
@@ -128,14 +143,15 @@ bool EdgeDetector::compare(std::map<std::string, double> map1, std::map<std::str
 }
 
 double EdgeDetector::calibrationByCoin(const cv::Mat &coin_pic, double length) {
+    if(coin_pic.empty()){
+        std::cout << "图像读取错误" << std::endl;
+        return -1;
+    }
     double pixel_length = 0;
     cv::Mat pic = coin_pic.clone();
     cv::cvtColor(pic, pic, cv::COLOR_BGR2GRAY);
-//    cv::GaussianBlur(pic, pic, cv::Size(9, 9), 0, 0);
     cv::medianBlur(pic, pic, 9);
-//    cv::threshold(pic, pic, 100, 255, cv::THRESH_BINARY);
-//    cv::adaptiveThreshold(pic, pic, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 11, 2);
-    cv::threshold(pic, pic, BINARYZATION_THRESHOLD, 255, cv::THRESH_BINARY);
+    cv::threshold(pic, pic, 140, 255, cv::THRESH_BINARY);
     cv::bitwise_not(pic, pic);
     imfill(pic);
     std::vector<std::vector<cv::Point>> contours;
@@ -269,4 +285,28 @@ bool EdgeDetector::adaptContrastEnhancement(cv::Mat &scr, cv::Mat &dst, int winS
 
     cvtColor(ycc, dst, cv::COLOR_YCrCb2RGB);
     return true;
+}
+
+EdgeDetector::Goodness EdgeDetector::calGoodnessOfFit(const std::vector<cv::Point> &ori_contour, const std::vector<cv::Point> &aft_contour){
+    double sum = 0;
+    int count = 0;
+    for(auto p : aft_contour){
+        double min_distance = INT64_MAX;
+        for(auto ori_p : ori_contour){
+            double d = calDistance(p, ori_p);
+            if(d < min_distance){
+                min_distance = d;
+            } 
+        }
+        if(min_distance == INT64_MAX){
+            std::cout << "未找到最小值??" << std::endl;
+            sum += 0;
+        } else{
+                sum += min_distance;
+        }
+        if(min_distance < 3) {
+            count++;
+        }
+    }
+    return {sum, (double)count / aft_contour.size()};
 }

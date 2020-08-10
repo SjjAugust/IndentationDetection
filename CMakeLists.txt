@@ -4,6 +4,8 @@ project(${PROJECT_NAME})
 
 set(CMAKE_CXX_STANDARD 14)
 
+set(CMAKE_PREFIX_PATH "D:/OpenCV/mingw_build")
+
 find_package(OpenCV REQUIRED)
 
 include_directories(${OpenCV_INCLUDE_DIRS})

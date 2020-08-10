@@ -4,31 +4,35 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "D:/Repositories/IndentationDetection/src/EdgeDetector.cpp" "D:/Repositories/IndentationDetection/cmake-build-debug/CMakeFiles/IndentationDetection.dir/src/EdgeDetector.cpp.obj"
-  "D:/Repositories/IndentationDetection/src/main.cpp" "D:/Repositories/IndentationDetection/cmake-build-debug/CMakeFiles/IndentationDetection.dir/src/main.cpp.obj"
+  "E:/Repositories/IndentationDetection/src/EdgeDetector.cpp" "E:/Repositories/IndentationDetection/cmake-build-debug/CMakeFiles/IndentationDetection.dir/src/EdgeDetector.cpp.obj"
+  "E:/Repositories/IndentationDetection/src/main.cpp" "E:/Repositories/IndentationDetection/cmake-build-debug/CMakeFiles/IndentationDetection.dir/src/main.cpp.obj"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
 # The include file search paths:
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
-  "D:/DevelopTools/opencv/mingw-build"
-  "D:/DevelopTools/opencv/sources/include"
-  "D:/DevelopTools/opencv/sources/modules/core/include"
-  "D:/DevelopTools/opencv/sources/modules/flann/include"
-  "D:/DevelopTools/opencv/sources/modules/imgproc/include"
-  "D:/DevelopTools/opencv/sources/modules/ml/include"
-  "D:/DevelopTools/opencv/sources/modules/photo/include"
-  "D:/DevelopTools/opencv/sources/modules/dnn/include"
-  "D:/DevelopTools/opencv/sources/modules/features2d/include"
-  "D:/DevelopTools/opencv/sources/modules/gapi/include"
-  "D:/DevelopTools/opencv/sources/modules/imgcodecs/include"
-  "D:/DevelopTools/opencv/sources/modules/videoio/include"
-  "D:/DevelopTools/opencv/sources/modules/calib3d/include"
-  "D:/DevelopTools/opencv/sources/modules/highgui/include"
-  "D:/DevelopTools/opencv/sources/modules/objdetect/include"
-  "D:/DevelopTools/opencv/sources/modules/stitching/include"
-  "D:/DevelopTools/opencv/sources/modules/ts/include"
-  "D:/DevelopTools/opencv/sources/modules/video/include"
+  "D:/OpenCV/mingw_build"
+  "D:/opencv-3.4.11/include"
+  "D:/opencv-3.4.11/include/opencv"
+  "D:/opencv-3.4.11/modules/core/include"
+  "D:/opencv-3.4.11/modules/flann/include"
+  "D:/opencv-3.4.11/modules/imgproc/include"
+  "D:/opencv-3.4.11/modules/ml/include"
+  "D:/opencv-3.4.11/modules/photo/include"
+  "D:/opencv-3.4.11/modules/video/include"
+  "D:/opencv-3.4.11/modules/dnn/include"
+  "D:/opencv-3.4.11/modules/features2d/include"
+  "D:/opencv-3.4.11/modules/imgcodecs/include"
+  "D:/opencv-3.4.11/modules/shape/include"
+  "D:/opencv-3.4.11/modules/videoio/include"
+  "D:/opencv-3.4.11/modules/calib3d/include"
+  "D:/opencv-3.4.11/modules/highgui/include"
+  "D:/opencv-3.4.11/modules/objdetect/include"
+  "D:/opencv-3.4.11/modules/stitching/include"
+  "D:/opencv-3.4.11/modules/superres/include"
+  "D:/opencv-3.4.11/modules/videostab/include"
+  "D:/opencv-3.4.11/modules/world/include"
+  "D:/opencv-3.4.11/modules/ts/include"
   )
 
 # Targets to which this target links.
