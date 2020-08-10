@@ -8,22 +8,11 @@ EdgeDetector::EdgeDetector(const cv::Mat& input_pic){
     ori_pic_ = input_pic.clone();
 }
 
-cv::Mat EdgeDetector::cannyDetect(int min_threshold, int max_threshold, int sobel_size) {
-    cv::Canny(ori_pic_, dst_pic_, min_threshold, max_threshold, sobel_size);
-    cv::dilate(dst_pic_, dst_pic_, cv::noArray());
-    std::vector<std::vector<cv::Point>> contours;
-    cv::Mat savedGrayMat = cv::Mat::zeros(dst_pic_.rows, dst_pic_.cols, CV_8UC1);
-    cv::findContours(dst_pic_, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
-    cv::drawContours(savedGrayMat, contours, 0, cv::Scalar(255), cv::FILLED);
-    std::cout << "contours size" << contours.size() << std::endl;
-    return dst_pic_.clone();
-}
-
 
 
 void EdgeDetector::preProcess(const cv::Size& gauss_kernel_size) {
     dst_pic_ = ori_pic_.clone();
-    adaptContrastEnhancement(dst_pic_, dst_pic_, 15, 10);
+//    adaptContrastEnhancement(dst_pic_, dst_pic_, 15, 10);
     cv::imwrite("../pic/enhance.jpg", dst_pic_);
     cv::cvtColor(dst_pic_, dst_pic_, cv::COLOR_BGR2GRAY);
 //    cv::GaussianBlur(dst_pic_, dst_pic_, gauss_kernel_size, 0, 0);
@@ -31,7 +20,8 @@ void EdgeDetector::preProcess(const cv::Size& gauss_kernel_size) {
 }
 
 cv::Mat EdgeDetector::detectEdge() {
-    cv::adaptiveThreshold(dst_pic_, dst_pic_, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 11, 2);
+//    cv::adaptiveThreshold(dst_pic_, dst_pic_, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 11, 2);
+    cv::threshold(dst_pic_, dst_pic_, BINARYZATION_THRESHOLD, 255, cv::THRESH_BINARY);
     cv::imwrite("../pic/step1.jpg", dst_pic_);
     cv::medianBlur(dst_pic_, dst_pic_, 9);
     cv::imwrite("../pic/step2.jpg", dst_pic_);
@@ -42,63 +32,6 @@ cv::Mat EdgeDetector::detectEdge() {
     cv::imshow("x", dst_pic_);
     cv::waitKey(0);
     return dst_pic_.clone();
-}
-
-cv::Mat EdgeDetector::findHole(const cv::Size &gauss_kernel_size, int min_threshold, int max_threshold, int sobel_size) {
-    preProcess(gauss_kernel_size);
-    cv::Mat canny_mat = cannyDetect(min_threshold, max_threshold, sobel_size);
-    std::vector<std::vector<cv::Point>> all_contours_vec;
-    cv::findContours(canny_mat, all_contours_vec, cv::RETR_CCOMP, cv::CHAIN_APPROX_NONE);
-
-    std::vector<bool> is_arc = judgeArc(all_contours_vec);
-
-
-    cv::Mat canvas = cv::Mat::zeros(canny_mat.size(), canny_mat.type());
-    for(int i = 0; i < all_contours_vec.size(); i++){
-        if(all_contours_vec[i].size() < MIN_CONTOURS_LENGTH || all_contours_vec[i].size() > MAX_CONTOURS_LENGTH){
-            is_arc[i] = false;
-        }
-        if(is_arc[i] == true){
-//            std::cout << "length:" << all_contours_vec[i].size() << std::endl;
-            cv::drawContours(canvas, all_contours_vec, i, cv::Scalar(255, 0, 0));
-            devideCurve(all_contours_vec[i], 6);
-        }
-    }
-    cv::namedWindow("x", 0);
-    cv::imshow("x", canvas);
-    cv::waitKey(0);
-
-
-    return canvas;
-
-}
-
-std::vector<bool> EdgeDetector::judgeArc(const std::vector<std::vector<cv::Point>> &all_contour_vec) {
-    std::vector<bool> is_arc;
-    for(auto vec : all_contour_vec){
-        cv::Point start = vec[0], end = vec[vec.size()-1];
-        double angle0 = calAngle(start, end);
-        std::vector<double> angle_vec;
-        for(int j = 1; j < vec.size(); j++){
-            double angle1 = calAngle(start, vec[j]);
-            angle_vec.push_back(angle1);
-        }
-        std::vector<bool> judge_vec;
-        for(auto angle : angle_vec){
-            bool status = angle > angle0;
-            judge_vec.push_back(status);
-        }
-        bool is_cruve = true;
-        bool temp = judge_vec[0];
-        for(auto status : judge_vec){
-            if(status != temp){
-                is_cruve = false;
-                break;
-            }
-        }
-        is_arc.push_back(is_cruve);
-    }
-    return is_arc;
 }
 
 double EdgeDetector::calDistance(const cv::Point& p1, const cv::Point& p2) {
@@ -130,80 +63,37 @@ double EdgeDetector::calPointToLineDistance(const cv::Point &p0, const cv::Point
 
 }
 
-double EdgeDetector::calCurvity(const std::vector<cv::Point> &curve) {
-    double curvity = 0;
-    if(curve.size() < 4){
-        std::cout << "curve length is less than 4!" << std::endl;
-        return 0;
-    }
-    cv::Point start = curve[0], end = curve[curve.size()-1];
-    double chord_length = calDistance(start, end);
-    double h = 0;
-    for(auto p : curve){
-        double temp = calPointToLineDistance(p, start, end);
-        if(h < temp){
-            h = temp;
-        }
-    }
-    double r = 0.5 * (pow(chord_length, 2) / h + h);
-    return 1 / r;
-}
-
-std::vector<std::vector<cv::Point>> EdgeDetector::devideCurve(const std::vector<cv::Point> &curve, int k) {
-    if(curve.size() < 4){
-        std::cout << "curve is too short!" << std::endl;
-        return std::vector<std::vector<cv::Point>>();
-    }
-    int length = curve.size();
-    std::vector<std::vector<cv::Point>> result;
-    //计算曲线上每个点的曲率
-    std::vector<double> all_curvity;
-    std::cout << "curve length:" << length << std::endl;
-    for(int i = 0; i < length; i++){
-        std::vector<cv::Point> curve_part;
-        for(int j = 0; j < k; j++){
-            curve_part.push_back(curve[(i+j)%length]);
-        }
-        double curvity = calCurvity(curve_part);
-        all_curvity.push_back(curvity);
-    }
-    //计算分割后曲线个数
-    bool is_done = false;
-    int curve_num = 1;
-    for(int i = 0; i < all_curvity.size(); i++){
-        double threshold = 0.1;
-        if(all_curvity[i] < threshold && all_curvity[i] > 0.03){
-            if(!is_done){
-                is_done = true;
-                curve_num++;
-            }
-        } else {
-            is_done = false;
-        }
-    }
-    std::cout << "devide num:" << curve_num << std::endl;
-    return result;
-}
 
 cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, int hole_num, std::vector<double>& radius, std::vector<cv::Point>& center_vec) {
+    //预处理，灰度化，中值滤波
     preProcess(gauss_kernel_size);
+    //二值化，填充孔洞
     cv::Mat bin_mat = detectEdge();
-
+    //找到所有轮廓
     std::vector<std::vector<cv::Point>> all_contours_vec;
     cv::findContours(bin_mat, all_contours_vec, cv::RETR_CCOMP, cv::CHAIN_APPROX_NONE);
     cv::Mat canvas = cv::Mat::zeros(bin_mat.size(), bin_mat.type());
     cv::Mat ret = ori_pic_.clone();
     cv::Mat bin_canvas = bin_mat.clone();
     cv::cvtColor(bin_canvas, bin_canvas, cv::COLOR_GRAY2BGR);
+    //对轮廓面积进行滤波，
     std::vector<std::map<std::string, double>> area;
     for(int i = 0; i < all_contours_vec.size(); i++){
         double s = cv::contourArea(all_contours_vec[i]);
-        std::map<std::string, double> map;
-        map["idx"] = i;
-        map["area"] = s;
-        area.push_back(map);
+        if(s > MIN_AREA && s < MAX_AREA){
+            std::map<std::string, double> map;
+            map["idx"] = i;
+            map["area"] = s;
+            area.push_back(map);
+        } else {
+            cv::drawContours(bin_mat, all_contours_vec, i, cv::Scalar(0), cv::FILLED);
+        }
+
     }
+    cv::imwrite("../pic/step4.jpg", bin_mat);
+    //按照面积从大到小排序
     std::sort(area.begin(), area.end(), compare);
+    //对周长进行滤波
     int count = 0;
     for(int i = 0; i < area.size(); i++){
         std::cout << "the " << i << "circumference is:" << all_contours_vec[area[i]["idx"]].size() << std::endl;
@@ -228,7 +118,7 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
         radius.push_back(r);
         center_vec.push_back(center);
     }
-    cv::imwrite("../pic/step4.jpg", canvas);
+    cv::imwrite("../pic/step5.jpg", canvas);
     cv::imwrite("../pic/step3_1.jpg", bin_canvas);
     return ret;
 }
@@ -241,10 +131,11 @@ double EdgeDetector::calibrationByCoin(const cv::Mat &coin_pic, double length) {
     double pixel_length = 0;
     cv::Mat pic = coin_pic.clone();
     cv::cvtColor(pic, pic, cv::COLOR_BGR2GRAY);
-    cv::GaussianBlur(pic, pic, cv::Size(9, 9), 0, 0);
+//    cv::GaussianBlur(pic, pic, cv::Size(9, 9), 0, 0);
     cv::medianBlur(pic, pic, 9);
 //    cv::threshold(pic, pic, 100, 255, cv::THRESH_BINARY);
-    cv::adaptiveThreshold(pic, pic, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 11, 2);
+//    cv::adaptiveThreshold(pic, pic, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 11, 2);
+    cv::threshold(pic, pic, BINARYZATION_THRESHOLD, 255, cv::THRESH_BINARY);
     cv::bitwise_not(pic, pic);
     imfill(pic);
     std::vector<std::vector<cv::Point>> contours;

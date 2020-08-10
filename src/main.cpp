@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 int main() {
-    cv::Mat input_mat3 = cv::imread("../pic/test/pic_new11.jpg");
+    cv::Mat input_mat3 = cv::imread("../pic/test/pic_new1.jpg");
     cv::Mat coin_pic = cv::imread("../pic/calib2.jpg");
     std::vector<EdgeDetector> vec;
     vec.emplace_back(EdgeDetector(input_mat3));

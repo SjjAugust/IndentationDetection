@@ -36,9 +36,6 @@ default_target: all
 .SUFFIXES: .hpux_make_needs_suffix_list
 
 
-# Produce verbose output by default.
-VERBOSE = 1
-
 # Suppress display of executed commands.
 $(VERBOSE).SILENT:
 
@@ -63,16 +60,16 @@ RM = D:\DevelopTools\Cmake\bin\cmake.exe -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = D:\Repositories\IndentationDetection\cmake-build-debug\CMakeFiles\CMakeTmp
+CMAKE_SOURCE_DIR = D:\Repositories\IndentationDetection
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = D:\Repositories\IndentationDetection\cmake-build-debug\CMakeFiles\CMakeTmp
+CMAKE_BINARY_DIR = D:\Repositories\IndentationDetection\cmake-build-debug
 
 #=============================================================================
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/cmTC_678c7.dir/all
+all: CMakeFiles/IndentationDetection.dir/all
 
 .PHONY : all
 
@@ -82,37 +79,44 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
-clean: CMakeFiles/cmTC_678c7.dir/clean
+clean: CMakeFiles/IndentationDetection.dir/clean
 
 .PHONY : clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/cmTC_678c7.dir
+# Target rules for target CMakeFiles/IndentationDetection.dir
 
 # All Build rule for target.
-CMakeFiles/cmTC_678c7.dir/all:
-	$(MAKE) -f CMakeFiles\cmTC_678c7.dir\build.make CMakeFiles/cmTC_678c7.dir/depend
-	$(MAKE) -f CMakeFiles\cmTC_678c7.dir\build.make CMakeFiles/cmTC_678c7.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=D:\Repositories\IndentationDetection\cmake-build-debug\CMakeFiles\CMakeTmp\CMakeFiles --progress-num=1,2 "Built target cmTC_678c7"
-.PHONY : CMakeFiles/cmTC_678c7.dir/all
+CMakeFiles/IndentationDetection.dir/all:
+	$(MAKE) -f CMakeFiles\IndentationDetection.dir\build.make CMakeFiles/IndentationDetection.dir/depend
+	$(MAKE) -f CMakeFiles\IndentationDetection.dir\build.make CMakeFiles/IndentationDetection.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=D:\Repositories\IndentationDetection\cmake-build-debug\CMakeFiles --progress-num=1,2,3 "Built target IndentationDetection"
+.PHONY : CMakeFiles/IndentationDetection.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/cmTC_678c7.dir/rule:
-	$(CMAKE_COMMAND) -E cmake_progress_start D:\Repositories\IndentationDetection\cmake-build-debug\CMakeFiles\CMakeTmp\CMakeFiles 2
-	$(MAKE) -f CMakeFiles\Makefile2 CMakeFiles/cmTC_678c7.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start D:\Repositories\IndentationDetection\cmake-build-debug\CMakeFiles\CMakeTmp\CMakeFiles 0
-.PHONY : CMakeFiles/cmTC_678c7.dir/rule
+CMakeFiles/IndentationDetection.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start D:\Repositories\IndentationDetection\cmake-build-debug\CMakeFiles 3
+	$(MAKE) -f CMakeFiles\Makefile2 CMakeFiles/IndentationDetection.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start D:\Repositories\IndentationDetection\cmake-build-debug\CMakeFiles 0
+.PHONY : CMakeFiles/IndentationDetection.dir/rule
 
 # Convenience name for target.
-cmTC_678c7: CMakeFiles/cmTC_678c7.dir/rule
+IndentationDetection: CMakeFiles/IndentationDetection.dir/rule
 
-.PHONY : cmTC_678c7
+.PHONY : IndentationDetection
 
 # clean rule for target.
-CMakeFiles/cmTC_678c7.dir/clean:
-	$(MAKE) -f CMakeFiles\cmTC_678c7.dir\build.make CMakeFiles/cmTC_678c7.dir/clean
-.PHONY : CMakeFiles/cmTC_678c7.dir/clean
+CMakeFiles/IndentationDetection.dir/clean:
+	$(MAKE) -f CMakeFiles\IndentationDetection.dir\build.make CMakeFiles/IndentationDetection.dir/clean
+.PHONY : CMakeFiles/IndentationDetection.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.
+
+# Special rule to run CMake to check the build system integrity.
+# No rule that depends on this can have commands that come from listfiles
+# because they might be regenerated.
+cmake_check_build_system:
+	$(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles\Makefile.cmake 0
+.PHONY : cmake_check_build_system
 
