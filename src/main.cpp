@@ -6,10 +6,13 @@ int main(int argc, char *argv[]) {
     std::string spci_name = argv[1];
     std::string pic_name = "../pic/test/" + spci_name + ".jpg";
     cv::Mat input_mat3 = cv::imread(pic_name);
-    cv::Mat coin_pic = cv::imread("../pic/calib2.jpg");
+    cv::Mat coin_pic = cv::imread("../pic/calib5.jpg");
     EdgeDetector edgedetector(input_mat3, std::stoi(argv[2]));
-    double pixel_len = EdgeDetector::calibrationByCoin(coin_pic, 25);
+    // double pixel_len = edgedetector.calibrationByCoin(coin_pic, 25);
+    double pixel_len = 0.0303331;
+    edgedetector.setPixelLength(pixel_len);
     std::cout << "pixel_len:" << pixel_len << std::endl;
+    std::cin.get();
     std::vector<double> radius;
     std::vector<cv::Point> center;
     cv::Mat res = edgedetector.findHoleByBinaryzation(cv::Size(15, 15), 2, radius, center);

@@ -35,11 +35,11 @@ cv::Mat EdgeDetector::detectEdge() {
     return dst_pic_.clone();
 }
 
-double EdgeDetector::calDistance(const cv::Point& p1, const cv::Point& p2) {
+const double EdgeDetector::calDistance(const cv::Point& p1, const cv::Point& p2) {
     return sqrt(pow((p2.y - p1.y), 2) + pow((p2.x - p1.x), 2));
 }
 
-double EdgeDetector::calAngle(const cv::Point &p1, const cv::Point &p2) {
+const double EdgeDetector::calAngle(const cv::Point &p1, const cv::Point &p2) {
     double angle = 0;
     double len = calDistance(p1, p2);
     if(p2.y - p1.y > 0){
@@ -67,7 +67,7 @@ double EdgeDetector::calPointToLineDistance(const cv::Point &p0, const cv::Point
 
 cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, int hole_num, std::vector<double>& radius, std::vector<cv::Point>& center_vec) {
     //预处理，灰度化，中值滤波
-    preProcess( );
+    preProcess(gauss_kernel_size);
     //二值化，填充孔洞
     cv::Mat bin_mat = detectEdge();
     //找到所有轮廓
@@ -108,10 +108,14 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
             continue;
         }
         cv::drawContours(bin_canvas, all_contours_vec, area[i]["idx"], cv::Scalar(0 ,0 , 255), 3);
+        /*
         cv::RotatedRect rrt = cv::fitEllipse(all_contours_vec[area[i]["idx"]]);  
         double axis1 = rrt.size.width, axis2 = rrt.size.height;
         double r = (axis1 + axis2) / 4;
-        cv::Point center = rrt.center;
+        cv::Point center = rrt.center;*/
+        cv::Vec3d circle_info = getCircleByRANSAC(all_contours_vec[area[i]["idx"]], 5000, 0.95, bin_mat.size());
+        cv::Point center(circle_info[0], circle_info[1]);
+        double r = circle_info[2];
 
         cv::Mat canvas_temp = cv::Mat::zeros(bin_mat.size(), bin_mat.type());
         std::vector<cv::Point> aft_contour;
@@ -126,7 +130,8 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
         Goodness goodness = calGoodnessOfFit(all_contours_vec[area[i]["idx"]], aft_contour);
         std::cout << "sum distance:" << goodness.sum_distance << std::endl << "rate:" << goodness.rate << std::endl;
 
-        cv::circle(canvas, center, r, cv::Scalar(255, 0, 0), 3);
+        cv::circle(canvas, center, (int)r, cv::Scalar(255, 0, 0), 3);
+        cv::circle(bin_canvas, center, (int)r, cv::Scalar(255, 0, 0), 3);
         cv::circle(ret, center, (int)r, cv::Scalar(0, 0, 255), 3);
 //        cv::ellipse(ret, rrt, cv::Scalar(0 ,0 ,255), 1);
         std::cout << "hole" << i << "'s radius: " << r << std::endl;
@@ -151,7 +156,7 @@ double EdgeDetector::calibrationByCoin(const cv::Mat &coin_pic, double length) {
     cv::Mat pic = coin_pic.clone();
     cv::cvtColor(pic, pic, cv::COLOR_BGR2GRAY);
     cv::medianBlur(pic, pic, 9);
-    cv::threshold(pic, pic, 140, 255, cv::THRESH_BINARY);
+    cv::threshold(pic, pic, 130, 255, cv::THRESH_BINARY);
     cv::bitwise_not(pic, pic);
     imfill(pic);
     std::vector<std::vector<cv::Point>> contours;
@@ -165,13 +170,16 @@ double EdgeDetector::calibrationByCoin(const cv::Mat &coin_pic, double length) {
         area.push_back(map);
     }
     std::sort(area.begin(), area.end(), compare);
-    cv::RotatedRect rrt = cv::fitEllipse(contours[area[0]["idx"]]);
-    double axis1 = rrt.size.width, axis2 = rrt.size.height;
-    double diam = (axis1 + axis2) / 2;
+    // cv::RotatedRect rrt = cv::fitEllipse(contours[area[0]["idx"]]);
+    // double axis1 = rrt.size.width, axis2 = rrt.size.height;
+    // double diam = (axis1 + axis2) / 2;
+    cv::Vec3d circle_info = getCircleByRANSAC(contours[area[0]["idx"]], 500, 0.95, coin_pic.size());
+    double diam = circle_info[2] * 2;
     pixel_length = length / diam;
-    cv::Point center = rrt.center;
+    cv::Point center(circle_info[0], circle_info[1]);
     cv::circle(coin_pic, center, (int)diam/2, cv::Scalar(0, 0, 255), 3);
     cv::imwrite("../pic/coin.jpg", coin_pic);
+    this->pixel_length = pixel_length;
     return pixel_length;
 }
 
@@ -308,5 +316,109 @@ EdgeDetector::Goodness EdgeDetector::calGoodnessOfFit(const std::vector<cv::Poin
             count++;
         }
     }
-    return {sum, (double)count / aft_contour.size()};
+    double rate;
+    if(aft_contour.size() == 0){
+        rate = 0;
+    } else {
+        rate = (double)count / aft_contour.size();
+    }
+    return {sum, rate};
+}
+
+EdgeDetector::Goodness EdgeDetector::calGoodnessOfFit(const std::vector<cv::Point> &ori_contour, const cv::Vec3d &circle_info, const cv::Size &canvas_size){
+    cv::Mat canvas_temp = cv::Mat::zeros(canvas_size, CV_8UC1);
+        std::vector<cv::Point> aft_contour;
+        cv::Point center(circle_info[0], circle_info[1]);
+        int r = circle_info[2];
+        cv::circle(canvas_temp, center, r, cv::Scalar(255), 1);
+        for(int i = 0; i < canvas_temp.rows; i++){
+            for(int j = 0; j < canvas_temp.cols; j++){
+                if(canvas_temp.at<uchar>(i, j) == 255){
+                    aft_contour.emplace_back(cv::Point(j, i));
+                }
+            }
+        }
+        return calGoodnessOfFit(ori_contour, aft_contour);
+}
+
+cv::Vec3d EdgeDetector::calCircleByThreePoints(const cv::Point &p1, const cv::Point &p2, const cv::Point &p3){
+    double A = p1.x * (p2.y - p3.y) - p1.y * (p2.x - p3.x) + p2.x * p3.y - p3.x * p2.y;
+    double B = (pow(p1.x, 2) + pow(p1.y, 2)) * (p3.y - p2.y) + (pow(p2.x, 2) + pow(p2.y, 2)) * (p1.y - p3.y) 
+    + (pow(p3.x, 2) + pow(p3.y, 2)) * (p2.y - p1.y);
+    double C = (pow(p1.x, 2) + pow(p1.y, 2)) * (p2.x - p3.x) + (pow(p2.x, 2) + pow(p2.y, 2)) * (p3.x - p1.x) 
+    + (pow(p3.x, 2) + pow(p3.y, 2)) * (p1.x - p2.x);
+    double D = (pow(p1.x, 2) + pow(p1.y, 2)) * (p3.x * p2.y - p2.x * p3.y) + (pow(p2.x, 2) + pow(p2.y, 2)) * (p1.x * p3.y - p3.x * p1.y) 
+    + (pow(p3.x, 2) + pow(p3.y, 2)) * (p2.x * p1.y - p1.x * p2.y);
+
+    double x = -(B / (2 * A));
+    double y = -(C / (2 * A));
+    double r;
+    if(A != 0){
+        r = sqrt((pow(B, 2) + pow(C, 2) - 4 * A * D) / (4 * pow(A, 2)));
+    } else {
+        std::cout << "A is wrong" << std::endl;
+        r = 1000;
+    }
+    
+
+    return {x, y, r};
+}
+
+cv::Vec3d EdgeDetector::getCircleByRANSAC(const std::vector<cv::Point> &contour, int cycle_num, double threshold, const cv::Size &canvas_size){
+    int size = contour.size();
+    int count = 0;
+    struct best
+    {
+        cv::Vec3d circle;
+        double rate = 0;
+    };
+    
+    best best_circle_info;
+    while (count++ < cycle_num){ 
+        std::vector<int> point_choose;
+        for(int i = 0; i < 3; i++){
+            int index = rand() % size;
+            for(int j = 0; j < point_choose.size(); j++){
+                if(index == point_choose[j]){
+                    index = rand() % size;
+                    j = 0;
+                }
+            }
+            point_choose.push_back(index);
+        }
+        cv::Vec3d circle_info = calCircleByThreePoints(contour[point_choose[0]], contour[point_choose[1]], contour[point_choose[2]]);
+        bool step_to_next = false;
+        for(auto p : contour){
+            double d = calDistance(cv::Point(circle_info[0], circle_info[1]), p);
+            if(d <= 3.0){
+                step_to_next = true;
+            }
+        }
+        if(step_to_next){
+            continue;
+        }
+        Goodness goodness = calGoodnessOfFit(contour, circle_info, canvas_size);
+        std::cout << "the " << count << " turn, rate:" << goodness.rate << std::endl; 
+        if(goodness.rate == 1){
+            std::cout << circle_info[0] << " " << circle_info[1] << " " << circle_info[2] << std::endl;
+            for(auto p : contour){
+                double d = calDistance(cv::Point(circle_info[0], circle_info[1]), p);
+                std::cout << d << std::endl;
+            }
+        }
+        if(goodness.rate > best_circle_info.rate){
+            best_circle_info.circle = circle_info;
+            best_circle_info.rate = goodness.rate;
+        }
+        if(goodness.rate > threshold){
+            break;
+        }
+    }
+    std::cin.get();
+    return best_circle_info.circle;
+    
+}
+
+void EdgeDetector::setPixelLength(double pix){
+    this->pixel_length = pix;
 }
