@@ -1346,13 +1346,3 @@ climits
 cstdlib
 -
 
-E:/Repositories/IndentationDetection/src/main.cpp
-iostream
--
-EdgeDetector.h
-E:/Repositories/IndentationDetection/src/EdgeDetector.h
-string
--
-vector
--
-

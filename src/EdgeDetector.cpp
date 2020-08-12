@@ -108,14 +108,15 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
             continue;
         }
         cv::drawContours(bin_canvas, all_contours_vec, area[i]["idx"], cv::Scalar(0 ,0 , 255), 3);
-        /*
+        
         cv::RotatedRect rrt = cv::fitEllipse(all_contours_vec[area[i]["idx"]]);  
         double axis1 = rrt.size.width, axis2 = rrt.size.height;
         double r = (axis1 + axis2) / 4;
-        cv::Point center = rrt.center;*/
-        cv::Vec3d circle_info = getCircleByRANSAC(all_contours_vec[area[i]["idx"]], 5000, 0.95, bin_mat.size());
-        cv::Point center(circle_info[0], circle_info[1]);
-        double r = circle_info[2];
+        cv::Point center = rrt.center;
+
+        // cv::Vec3d circle_info = getCircleByRANSAC(all_contours_vec[area[i]["idx"]], 5000, 0.95, bin_mat.size());
+        // cv::Point center(circle_info[0], circle_info[1]);
+        // double r = circle_info[2];
 
         cv::Mat canvas_temp = cv::Mat::zeros(bin_mat.size(), bin_mat.type());
         std::vector<cv::Point> aft_contour;
@@ -156,9 +157,11 @@ double EdgeDetector::calibrationByCoin(const cv::Mat &coin_pic, double length) {
     cv::Mat pic = coin_pic.clone();
     cv::cvtColor(pic, pic, cv::COLOR_BGR2GRAY);
     cv::medianBlur(pic, pic, 9);
-    cv::threshold(pic, pic, 130, 255, cv::THRESH_BINARY);
+    cv::threshold(pic, pic, 120, 255, cv::THRESH_BINARY);
+    cv::imwrite("../pic/calibration_step1.jpg", pic);
     cv::bitwise_not(pic, pic);
     imfill(pic);
+    cv::imwrite("../pic/calibration_step2.jpg", pic);
     std::vector<std::vector<cv::Point>> contours;
     cv::findContours(pic, contours, cv::RETR_CCOMP, cv::CHAIN_APPROX_NONE);
     std::vector<std::map<std::string, double>> area;
@@ -177,7 +180,8 @@ double EdgeDetector::calibrationByCoin(const cv::Mat &coin_pic, double length) {
     double diam = circle_info[2] * 2;
     pixel_length = length / diam;
     cv::Point center(circle_info[0], circle_info[1]);
-    cv::circle(coin_pic, center, (int)diam/2, cv::Scalar(0, 0, 255), 3);
+    // cv::Point center = rrt.center;
+    cv::circle(coin_pic, center, (int)diam/2, cv::Scalar(0, 0, 255), 1);
     cv::imwrite("../pic/coin.jpg", coin_pic);
     this->pixel_length = pixel_length;
     return pixel_length;
@@ -420,5 +424,5 @@ cv::Vec3d EdgeDetector::getCircleByRANSAC(const std::vector<cv::Point> &contour,
 }
 
 void EdgeDetector::setPixelLength(double pix){
-    this->pixel_length = pix;
+    this->pixel_length = pix;   
 }
