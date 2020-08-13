@@ -14,7 +14,6 @@ EdgeDetector::EdgeDetector(const cv::Mat& input_pic, int bin_threshold)
 void EdgeDetector::preProcess(const cv::Size& gauss_kernel_size) {
     dst_pic_ = ori_pic_.clone();
 //    adaptContrastEnhancement(dst_pic_, dst_pic_, 15, 10);
-    cv::imwrite("../pic/enhance.jpg", dst_pic_);
     cv::cvtColor(dst_pic_, dst_pic_, cv::COLOR_BGR2GRAY);
 //    cv::GaussianBlur(dst_pic_, dst_pic_, gauss_kernel_size, 0, 0);
     cv::medianBlur(dst_pic_, dst_pic_, 5);
@@ -23,12 +22,12 @@ void EdgeDetector::preProcess(const cv::Size& gauss_kernel_size) {
 cv::Mat EdgeDetector::detectEdge() {
 //    cv::adaptiveThreshold(dst_pic_, dst_pic_, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 11, 2);
     cv::threshold(dst_pic_, dst_pic_, BINARYZATION_THRESHOLD, 255, cv::THRESH_BINARY);
-    cv::imwrite("../pic/step1.jpg", dst_pic_);
+    cv::imwrite("../pic/process/step1.jpg", dst_pic_);
     cv::medianBlur(dst_pic_, dst_pic_, 9);
-    cv::imwrite("../pic/step2.jpg", dst_pic_);
+    cv::imwrite("../pic/precess/step2.jpg", dst_pic_);
     cv::bitwise_not(dst_pic_, dst_pic_);
     imfill(dst_pic_);
-    cv::imwrite("../pic/step3.jpg", dst_pic_);
+    cv::imwrite("../pic/process/step3.jpg", dst_pic_);
     // cv::namedWindow("x", 0);
     // cv::imshow("x", dst_pic_);
     // cv::waitKey(0);
@@ -91,7 +90,7 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
         }
 
     }
-    cv::imwrite("../pic/step4.jpg", bin_mat);
+    cv::imwrite("../pic/process/step4.jpg", bin_mat);
     //按照面积从大到小排序
     std::sort(area.begin(), area.end(), compare);
     //对周长进行滤波
@@ -109,14 +108,14 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
         }
         cv::drawContours(bin_canvas, all_contours_vec, area[i]["idx"], cv::Scalar(0 ,0 , 255), 3);
         
-        cv::RotatedRect rrt = cv::fitEllipse(all_contours_vec[area[i]["idx"]]);  
-        double axis1 = rrt.size.width, axis2 = rrt.size.height;
-        double r = (axis1 + axis2) / 4;
-        cv::Point center = rrt.center;
+        // cv::RotatedRect rrt = cv::fitEllipse(all_contours_vec[area[i]["idx"]]);  
+        // double axis1 = rrt.size.width, axis2 = rrt.size.height;
+        // double r = (axis1 + axis2) / 4;
+        // cv::Point center = rrt.center;
 
-        // cv::Vec3d circle_info = getCircleByRANSAC(all_contours_vec[area[i]["idx"]], 5000, 0.95, bin_mat.size());
-        // cv::Point center(circle_info[0], circle_info[1]);
-        // double r = circle_info[2];
+        cv::Vec3d circle_info = getCircleByRANSAC(all_contours_vec[area[i]["idx"]], 5000, 0.95, bin_mat.size());
+        cv::Point center(circle_info[0], circle_info[1]);
+        double r = circle_info[2];
 
         cv::Mat canvas_temp = cv::Mat::zeros(bin_mat.size(), bin_mat.type());
         std::vector<cv::Point> aft_contour;
@@ -139,9 +138,128 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
         radius.push_back(r);
         center_vec.push_back(center);
     }
-    cv::imwrite("../pic/step5.jpg", canvas);
-    cv::imwrite("../pic/step3_1.jpg", bin_canvas);
+    cv::imwrite("../pic/process/step5.jpg", canvas);
+    cv::imwrite("../pic/preocess/step3_1.jpg", bin_canvas);
     return ret;
+}
+
+cv::Mat EdgeDetector::findHoleSubPixel(const cv::Size &gauss_kernel_size, int hole_num, std::vector<double>& radius, std::vector<cv::Point>& center_vec){
+    //预处理，灰度化，中值滤波
+    preProcess(gauss_kernel_size);
+    //二值化，填充孔洞
+    cv::Mat bin_mat = detectEdge();
+    //找到所有轮廓
+    std::vector<std::vector<cv::Point>> all_contours_vec;
+    cv::findContours(bin_mat, all_contours_vec, cv::RETR_CCOMP, cv::CHAIN_APPROX_NONE);
+    cv::Mat canvas = cv::Mat::zeros(bin_mat.size(), bin_mat.type());
+    cv::Mat ret = ori_pic_.clone();
+    cv::Mat bin_canvas = bin_mat.clone();
+    cv::cvtColor(bin_canvas, bin_canvas, cv::COLOR_GRAY2BGR);
+    //对轮廓面积进行滤波，
+    std::vector<std::map<std::string, double>> area;
+    for(int i = 0; i < all_contours_vec.size(); i++){
+        double s = cv::contourArea(all_contours_vec[i]);
+        if(s > MIN_AREA && s < MAX_AREA){
+            std::map<std::string, double> map;
+            map["idx"] = i;
+            map["area"] = s;
+            area.push_back(map);
+        } else {
+            cv::drawContours(bin_mat, all_contours_vec, i, cv::Scalar(0), cv::FILLED);
+        }
+
+    }
+    cv::imwrite("../pic/precess/step4.jpg", bin_mat);
+    //按照面积从大到小排序
+    std::sort(area.begin(), area.end(), compare);
+    //对周长进行滤波
+    int count = 0;
+    for(int i = 0; i < area.size(); i++){
+        std::cout << "the " << i << "circumference is:" << all_contours_vec[area[i]["idx"]].size() << std::endl;
+        if(count == 2){
+            break;
+        }
+        if(all_contours_vec[area[i]["idx"]].size() > MIN_CONTOURS_LENGTH &&
+        all_contours_vec[area[i]["idx"]].size() < MAX_CONTOURS_LENGTH){
+            count++;
+        } else {
+            continue;
+        }
+        cv::drawContours(bin_canvas, all_contours_vec, area[i]["idx"], cv::Scalar(0 ,0 , 255), 3);
+
+        cv::Mat gray_pic;
+        cv::cvtColor(ori_pic_, gray_pic, cv::COLOR_BGR2GRAY);
+        getSubPixelContour(all_contours_vec[area[i]["idx"]], gray_pic);
+
+        //拟合圆
+        // cv::RotatedRect rrt = cv::fitEllipse(all_contours_vec[area[i]["idx"]]);  
+        // double axis1 = rrt.size.width, axis2 = rrt.size.height;
+        // double r = (axis1 + axis2) / 4;
+        // cv::Point center = rrt.center;
+
+        cv::Vec3d circle_info = getCircleByRANSAC(all_contours_vec[area[i]["idx"]], 5000, 0.95, bin_mat.size());
+        cv::Point center(circle_info[0], circle_info[1]);
+        double r = circle_info[2];
+
+        cv::Mat canvas_temp = cv::Mat::zeros(bin_mat.size(), bin_mat.type());
+        std::vector<cv::Point> aft_contour;
+        cv::circle(canvas_temp, center, r, cv::Scalar(255), 1);
+        for(int i = 0; i < canvas_temp.rows; i++){
+            for(int j = 0; j < canvas_temp.cols; j++){
+                if(canvas_temp.at<uchar>(i, j) == 255){
+                    aft_contour.emplace_back(cv::Point(j, i));
+                }
+            }
+        }
+        Goodness goodness = calGoodnessOfFit(all_contours_vec[area[i]["idx"]], aft_contour);
+        std::cout << "sum distance:" << goodness.sum_distance << std::endl << "rate:" << goodness.rate << std::endl;
+
+        cv::circle(canvas, center, (int)r, cv::Scalar(255, 0, 0), 3);
+        cv::circle(bin_canvas, center, (int)r, cv::Scalar(255, 0, 0), 3);
+        cv::circle(ret, center, (int)r, cv::Scalar(0, 0, 255), 3);
+//        cv::ellipse(ret, rrt, cv::Scalar(0 ,0 ,255), 1);
+        std::cout << "hole" << i << "'s radius: " << r << std::endl;
+        radius.push_back(r);
+        center_vec.push_back(center);
+    }
+    cv::imwrite("../pic/precess/step5.jpg", canvas);
+    cv::imwrite("../pic/preocess/step3_1.jpg", bin_canvas);
+    return ret;
+}
+
+std::vector<cv::Point> EdgeDetector::getSubPixelContour(const std::vector<cv::Point>& contour, const cv::Mat& gray_pic){
+    //获得圆孔区域
+    cv::Rect roi_rect = cv::boundingRect(contour);
+    roi_rect = roi_rect + cv::Size(20, 20);
+    roi_rect = roi_rect + cv::Point(-10, -10);
+    //在灰度图上截取该部分
+    cv::Mat roi = gray_pic(roi_rect).clone();
+    //求每一列的平均数
+    std::vector<double> col_avg;
+    for(int i = 0; i < roi.cols; i++){
+        double avg = 0;
+        for(int j = 0; j < roi.rows; j++){
+            avg += roi.at<uchar>(j, i);
+        }
+        avg /= roi.rows;
+        col_avg.push_back(avg);
+    }
+    //求梯度
+    std::vector<double> col_avg_diff;
+    col_avg_diff.resize(col_avg.size());
+    for(int i = 0; i < col_avg.size(); i++){
+        if(i == 0){
+            col_avg_diff[i] = 0;
+        }else {
+            col_avg_diff[i] = col_avg[i] - col_avg[i - 1];
+        }
+        std::cout << "diff:" << col_avg_diff[i] << std::endl;
+    }
+    //归一化
+    int 
+    cv::namedWindow("roi", cv::WINDOW_KEEPRATIO);
+    cv::imshow("roi", roi);
+    cv::waitKey(0);
 }
 
 bool EdgeDetector::compare(std::map<std::string, double> map1, std::map<std::string, double> map2){
@@ -158,10 +276,10 @@ double EdgeDetector::calibrationByCoin(const cv::Mat &coin_pic, double length) {
     cv::cvtColor(pic, pic, cv::COLOR_BGR2GRAY);
     cv::medianBlur(pic, pic, 9);
     cv::threshold(pic, pic, 120, 255, cv::THRESH_BINARY);
-    cv::imwrite("../pic/calibration_step1.jpg", pic);
+    cv::imwrite("../pic/preocess/calibration_step1.jpg", pic);
     cv::bitwise_not(pic, pic);
     imfill(pic);
-    cv::imwrite("../pic/calibration_step2.jpg", pic);
+    cv::imwrite("../pic/precess/calibration_step2.jpg", pic);
     std::vector<std::vector<cv::Point>> contours;
     cv::findContours(pic, contours, cv::RETR_CCOMP, cv::CHAIN_APPROX_NONE);
     std::vector<std::map<std::string, double>> area;
@@ -189,15 +307,15 @@ double EdgeDetector::calibrationByCoin(const cv::Mat &coin_pic, double length) {
 
 void EdgeDetector::imfill(cv::Mat &mat) {
     cv::Size ori_size = mat.size();
-    cv::imwrite("../pic/fill1.jpg", mat);
+    cv::imwrite("../pic/precess/fill1.jpg", mat);
     cv::Mat temp = cv::Mat::zeros(ori_size.height+2, ori_size.width+2, mat.type());
     mat.copyTo(temp(cv::Range(1, ori_size.height + 1), cv::Range(1, ori_size.width + 1)));
     cv::floodFill(temp, cv::Point(0, 0), cv::Scalar(255));
-    cv::imwrite("../pic/fill2.jpg", temp);
+    cv::imwrite("../pic/precess/fill2.jpg", temp);
     cv::Mat cut_pic;
     temp(cv::Range(1, ori_size.height + 1), cv::Range(1, ori_size.width + 1)).copyTo(cut_pic);
     mat = mat | (~cut_pic);
-    cv::imwrite("../pic/fill3.jpg", mat);
+    cv::imwrite("../pic/precess/fill3.jpg", mat);
 }
 
 bool EdgeDetector::getVarianceMean(cv::Mat &scr, cv::Mat &meansDst, cv::Mat &varianceDst, int winSize) {
