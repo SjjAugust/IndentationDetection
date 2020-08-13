@@ -143,7 +143,7 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
     return ret;
 }
 
-cv::Mat EdgeDetector::findHoleSubPixel(const cv::Size &gauss_kernel_size, int hole_num, std::vector<double>& radius, std::vector<cv::Point>& center_vec){
+cv::Mat EdgeDetector::findHoleSubPixel(const cv::Size &gauss_kernel_size, int hole_num, std::vector<double>& diam, std::vector<cv::Point>& center_vec){
     //预处理，灰度化，中值滤波
     preProcess(gauss_kernel_size);
     //二值化，填充孔洞
@@ -189,37 +189,16 @@ cv::Mat EdgeDetector::findHoleSubPixel(const cv::Size &gauss_kernel_size, int ho
 
         cv::Mat gray_pic;
         cv::cvtColor(ori_pic_, gray_pic, cv::COLOR_BGR2GRAY);
-        getSubPixelContour(all_contours_vec[area[i]["idx"]], gray_pic);
+        double len = getSubPixelLength(all_contours_vec[area[i]["idx"]], gray_pic);
 
-        //拟合圆
-        // cv::RotatedRect rrt = cv::fitEllipse(all_contours_vec[area[i]["idx"]]);  
-        // double axis1 = rrt.size.width, axis2 = rrt.size.height;
-        // double r = (axis1 + axis2) / 4;
-        // cv::Point center = rrt.center;
-
-        cv::Vec3d circle_info = getCircleByRANSAC(all_contours_vec[area[i]["idx"]], 5000, 0.95, bin_mat.size());
-        cv::Point center(circle_info[0], circle_info[1]);
-        double r = circle_info[2];
-
-        cv::Mat canvas_temp = cv::Mat::zeros(bin_mat.size(), bin_mat.type());
-        std::vector<cv::Point> aft_contour;
-        cv::circle(canvas_temp, center, r, cv::Scalar(255), 1);
-        for(int i = 0; i < canvas_temp.rows; i++){
-            for(int j = 0; j < canvas_temp.cols; j++){
-                if(canvas_temp.at<uchar>(i, j) == 255){
-                    aft_contour.emplace_back(cv::Point(j, i));
-                }
-            }
+        std::cout << "hole" << i << "'s radius: " << len << std::endl;
+        diam.push_back(len);
+        cv::Point center(0, 0);
+        for(auto p : all_contours_vec[area[i]["idx"]]){
+            center += p;
         }
-        Goodness goodness = calGoodnessOfFit(all_contours_vec[area[i]["idx"]], aft_contour);
-        std::cout << "sum distance:" << goodness.sum_distance << std::endl << "rate:" << goodness.rate << std::endl;
-
-        cv::circle(canvas, center, (int)r, cv::Scalar(255, 0, 0), 3);
-        cv::circle(bin_canvas, center, (int)r, cv::Scalar(255, 0, 0), 3);
-        cv::circle(ret, center, (int)r, cv::Scalar(0, 0, 255), 3);
-//        cv::ellipse(ret, rrt, cv::Scalar(0 ,0 ,255), 1);
-        std::cout << "hole" << i << "'s radius: " << r << std::endl;
-        radius.push_back(r);
+        center.x /= all_contours_vec[area[i]["idx"]].size();
+        center.y /= all_contours_vec[area[i]["idx"]].size();
         center_vec.push_back(center);
     }
     cv::imwrite("../pic/precess/step5.jpg", canvas);
@@ -227,7 +206,7 @@ cv::Mat EdgeDetector::findHoleSubPixel(const cv::Size &gauss_kernel_size, int ho
     return ret;
 }
 
-std::vector<cv::Point> EdgeDetector::getSubPixelContour(const std::vector<cv::Point>& contour, const cv::Mat& gray_pic){
+double EdgeDetector::getSubPixelLength(const std::vector<cv::Point>& contour, const cv::Mat& gray_pic){
     //获得圆孔区域
     cv::Rect roi_rect = cv::boundingRect(contour);
     roi_rect = roi_rect + cv::Size(20, 20);
@@ -243,6 +222,7 @@ std::vector<cv::Point> EdgeDetector::getSubPixelContour(const std::vector<cv::Po
         }
         avg /= roi.rows;
         col_avg.push_back(avg);
+        
     }
     //求梯度
     std::vector<double> col_avg_diff;
@@ -253,13 +233,65 @@ std::vector<cv::Point> EdgeDetector::getSubPixelContour(const std::vector<cv::Po
         }else {
             col_avg_diff[i] = col_avg[i] - col_avg[i - 1];
         }
-        std::cout << "diff:" << col_avg_diff[i] << std::endl;
     }
     //归一化
-    int 
+    double abs_max = 0;
+    for(auto n : col_avg_diff){
+        abs_max = fabs(n) > abs_max ? fabs(n) : abs_max;
+    }
+    for(int i = 0; i < col_avg_diff.size(); i++){
+        col_avg_diff[i] /= abs_max;
+        if(col_avg_diff[i] > 1){
+            col_avg_diff[i] = 1.0;
+        } else if(col_avg_diff[i] < -1){
+            col_avg_diff[i] = -1.0;
+        }
+        std::cout << "diff:" << col_avg_diff[i] << std::endl;
+    }
+    std::vector<int> border_index;
+    border_index.resize(2);
+    double left_max = 0, right_max = 0;
+    for(int i = 0; i < col_avg_diff.size()/4; i++){
+        if(fabs(col_avg_diff[i]) > fabs(left_max)){
+            left_max = col_avg_diff[i];
+            border_index[0] = i;
+        }
+    }
+    for(int i = col_avg_diff.size()/4*3; i < col_avg_diff.size(); i++){
+        if(fabs(col_avg_diff[i]) > fabs(right_max)){
+            right_max = col_avg_diff[i];
+            border_index[1] = i;
+        }
+    }
+
+    //三点拟合一条二次曲线再做插值
+    std::vector<double> location;
+    for(auto idx : border_index){
+        std::cout << "value: " << col_avg_diff[idx] << std::endl;
+        cv::line(roi, cv::Point(idx, 0), cv::Point(idx, roi.rows - 1), cv::Scalar(255), 1);
+        double x1, y1, x2, y2, x3, y3;
+        x1 = idx - 1;
+        y1 = col_avg[idx - 1];
+        x2 = idx;
+        y2 = col_avg[idx];
+        x3 = idx + 1;
+        y3 = col_avg[idx + 1];
+        double a, b, c;
+        cv::Mat coefficient = (cv::Mat_<double>(3, 3)<< pow(x1, 2), x1, 1, pow(x2, 2), x2, 1, pow(x3, 2), x3, 1);
+        cv::Mat right = (cv::Mat_<double>(3, 1) << y1, y2, y3);
+        cv::Mat res = coefficient.inv() * right;
+        a = res.at<double>(0, 0);
+        b = res.at<double>(1, 0);
+        c = res.at<double>(2, 0);
+        location.push_back(-b / (2 * a));
+        std::cout << "ab:" << -b / (2 * a) << std::endl;
+    }
+    std::cout << "diam length:" << fabs(location[0] - location[1] ) << std::endl;
     cv::namedWindow("roi", cv::WINDOW_KEEPRATIO);
     cv::imshow("roi", roi);
     cv::waitKey(0);
+    cv::imwrite("../pic/process/roi.jpg", roi);
+    return fabs(location[0] - location[location.size() - 1]);
 }
 
 bool EdgeDetector::compare(std::map<std::string, double> map1, std::map<std::string, double> map2){

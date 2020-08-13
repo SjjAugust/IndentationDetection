@@ -50,11 +50,11 @@ private:
     cv::Vec3d calCircleByThreePoints(const cv::Point &p1, const cv::Point &p2, const cv::Point &p3);
     cv::Vec3d getCircleByRANSAC(const std::vector<cv::Point> &contour, int cycle_num, double threshold, const cv::Size &canvas_size);
     /*------根据三点计算圆心和半径------*/
-    std::vector<cv::Point> getSubPixelContour(const std::vector<cv::Point>& contour, const cv::Mat& gray_pic);
+    double getSubPixelLength(const std::vector<cv::Point>& contour, const cv::Mat& gray_pic);
 public:
     EdgeDetector(const cv::Mat& input_pic, int bin_threshold);
     cv::Mat findHoleByBinaryzation(const cv::Size &gauss_kernel_size, int hole_num, std::vector<double>& radius, std::vector<cv::Point>& center_vec);
-    cv::Mat findHoleSubPixel(const cv::Size &gauss_kernel_size, int hole_num, std::vector<double>& radius, std::vector<cv::Point>& center_vec);
+    cv::Mat findHoleSubPixel(const cv::Size &gauss_kernel_size, int hole_num, std::vector<double>& diam, std::vector<cv::Point>& center_vec);
     double calibrationByCoin(const cv::Mat& coin_pic, double length);
     void setPixelLength(double pix);
 };
