@@ -7,16 +7,32 @@
 EdgeDetector::EdgeDetector(const cv::Mat& input_pic, int bin_threshold)
 : BINARYZATION_THRESHOLD(bin_threshold){
     ori_pic_ = input_pic.clone();
+    MULTIPLE_INPUT = false;
+}
+
+EdgeDetector::EdgeDetector(const std::vector<cv::Mat>& input_pics, int bin_threshold)
+: BINARYZATION_THRESHOLD(bin_threshold){
+    this->input_pics = std::vector<cv::Mat>(input_pics);
+    MULTIPLE_INPUT = true;
 }
 
 
 
 void EdgeDetector::preProcess(const cv::Size& gauss_kernel_size) {
-    dst_pic_ = ori_pic_.clone();
+    if(!MULTIPLE_INPUT){
+         dst_pic_ = ori_pic_.clone();
 //    adaptContrastEnhancement(dst_pic_, dst_pic_, 15, 10);
     cv::cvtColor(dst_pic_, dst_pic_, cv::COLOR_BGR2GRAY);
 //    cv::GaussianBlur(dst_pic_, dst_pic_, gauss_kernel_size, 0, 0);
     cv::medianBlur(dst_pic_, dst_pic_, 5);
+    } else {
+        ori_pic_ = composePic(input_pics);
+        dst_pic_ = ori_pic_.clone();
+        cv::medianBlur(dst_pic_, dst_pic_, 5);
+        
+    }
+    
+   
 }
 
 cv::Mat EdgeDetector::detectEdge() {
@@ -188,7 +204,12 @@ cv::Mat EdgeDetector::findHoleSubPixel(const cv::Size &gauss_kernel_size, int ho
         cv::drawContours(bin_canvas, all_contours_vec, area[i]["idx"], cv::Scalar(0 ,0 , 255), 3);
 
         cv::Mat gray_pic;
-        cv::cvtColor(ori_pic_, gray_pic, cv::COLOR_BGR2GRAY);
+        if(!MULTIPLE_INPUT){
+            cv::cvtColor(ori_pic_, gray_pic, cv::COLOR_BGR2GRAY);
+        } else {
+            gray_pic = ori_pic_.clone();
+        }
+        
         double len = getSubPixelLength(all_contours_vec[area[i]["idx"]], gray_pic);
 
         std::cout << "hole" << i << "'s radius: " << len << std::endl;
@@ -227,6 +248,14 @@ double EdgeDetector::getSubPixelLength(const std::vector<cv::Point>& contour, co
     //求梯度
     std::vector<double> col_avg_diff;
     col_avg_diff.resize(col_avg.size());
+    for(int i = 0; i < col_avg.size(); i++){
+        if(i == 0){
+            col_avg_diff[i] = 0;
+        }else {
+            col_avg_diff[i] = col_avg[i] - col_avg[i - 1];
+        }
+    }
+    //求二阶梯度
     for(int i = 0; i < col_avg.size(); i++){
         if(i == 0){
             col_avg_diff[i] = 0;
@@ -283,8 +312,13 @@ double EdgeDetector::getSubPixelLength(const std::vector<cv::Point>& contour, co
         a = res.at<double>(0, 0);
         b = res.at<double>(1, 0);
         c = res.at<double>(2, 0);
-        location.push_back(-b / (2 * a));
-        std::cout << "ab:" << -b / (2 * a) << std::endl;
+        double sub_loc = -b / (2 * a);
+        if(sub_loc < x1-1 || sub_loc > x3+1){
+            sub_loc = x2;
+        }
+        location.push_back(sub_loc);
+        std::cout << "ab:" << -b / (2 * a) << "x2:" << x2 << std::endl;
+        
     }
     std::cout << "diam length:" << fabs(location[0] - location[1] ) << std::endl;
     cv::namedWindow("roi", cv::WINDOW_KEEPRATIO);
@@ -323,16 +357,16 @@ double EdgeDetector::calibrationByCoin(const cv::Mat &coin_pic, double length) {
         area.push_back(map);
     }
     std::sort(area.begin(), area.end(), compare);
-    // cv::RotatedRect rrt = cv::fitEllipse(contours[area[0]["idx"]]);
-    // double axis1 = rrt.size.width, axis2 = rrt.size.height;
-    // double diam = (axis1 + axis2) / 2;
-    cv::Vec3d circle_info = getCircleByRANSAC(contours[area[0]["idx"]], 500, 0.95, coin_pic.size());
-    double diam = circle_info[2] * 2;
+    cv::RotatedRect rrt = cv::fitEllipse(contours[area[0]["idx"]]);
+    double axis1 = rrt.size.width, axis2 = rrt.size.height;
+    double diam = (axis1 + axis2) / 2;
+    // cv::Vec3d circle_info = getCircleByRANSAC(contours[area[0]["idx"]], 500, 0.95, coin_pic.size());
+    // double diam = circle_info[2] * 2;
     pixel_length = length / diam;
-    cv::Point center(circle_info[0], circle_info[1]);
-    // cv::Point center = rrt.center;
+    // cv::Point center(circle_info[0], circle_info[1]);
+    cv::Point center = rrt.center;
     cv::circle(coin_pic, center, (int)diam/2, cv::Scalar(0, 0, 255), 1);
-    cv::imwrite("../pic/coin.jpg", coin_pic);
+    cv::imwrite("../pic/process/coin.jpg", coin_pic);
     this->pixel_length = pixel_length;
     return pixel_length;
 }
@@ -575,4 +609,20 @@ cv::Vec3d EdgeDetector::getCircleByRANSAC(const std::vector<cv::Point> &contour,
 
 void EdgeDetector::setPixelLength(double pix){
     this->pixel_length = pix;   
+}
+
+cv::Mat EdgeDetector::composePic(const std::vector<cv::Mat> &pics){
+    cv::Mat ret = cv::Mat::zeros(pics[0].size(), CV_32FC1);
+    for(auto pic : pics){
+        cv::Mat temp;
+        cv::cvtColor(pic, temp, cv::COLOR_BGR2GRAY);
+        cv::accumulate(temp, ret);
+    }
+    ret = ret / pics.size();
+    ret.convertTo(ret, CV_8UC1);
+    cv::namedWindow("x", CV_WINDOW_KEEPRATIO);
+    cv::imshow("x", ret);
+    cv::waitKey(0);
+    return ret.clone();
+
 }
