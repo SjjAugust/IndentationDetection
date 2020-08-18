@@ -12,6 +12,11 @@
 #include <algorithm>
 #include <climits>
 #include <cstdlib>
+#include <thread>
+#include <mutex>
+#include <sys/time.h>
+#include <sstream>
+#include <utility>
 #define PI acos(-1)
 
 
@@ -20,11 +25,11 @@ private:
     cv::Mat ori_pic_;
     cv::Mat dst_pic_;
     std::vector<cv::Mat> input_pics;
-    static const int MAX_CONTOURS_LENGTH = 650;
-    static const int MIN_CONTOURS_LENGTH = 290;
+    static const int MAX_CONTOURS_LENGTH = 99650;
+    static const int MIN_CONTOURS_LENGTH = 2000;
     int BINARYZATION_THRESHOLD = 138;
-    const double MAX_AREA = 29999;
-    const double MIN_AREA = 200;
+    const double MAX_AREA = 99999999;
+    const double MIN_AREA = 100000;
     bool MULTIPLE_INPUT;
     struct Goodness
     {
@@ -32,11 +37,11 @@ private:
         double rate = 0;
     };
     double pixel_length = 0;
-    
+    std::mutex ransac_mutex;
+    static std::vector<std::pair<cv::Vec3d, EdgeDetector::Goodness>> compare_info; 
 
     void preProcess(const cv::Size& gauss_kernel_size);
     cv::Mat detectEdge();
-
     const double calDistance(const cv::Point& p1, const cv::Point& p2);
     const double calAngle(const cv::Point& p1, const cv::Point& p2);
     double calPointToLineDistance(const cv::Point& p0, const cv::Point& p1, const cv::Point& p2);
@@ -52,8 +57,11 @@ private:
     /*------根据三点计算圆心和半径------*/
     cv::Vec3d calCircleByThreePoints(const cv::Point &p1, const cv::Point &p2, const cv::Point &p3);
     cv::Vec3d getCircleByRANSAC(const std::vector<cv::Point> &contour, int cycle_num, double threshold, const cv::Size &canvas_size);
+    void processCalculation(const std::vector<cv::Point> &contour, int &count, const cv::Size &canvas_size);
     /*------根据三点计算圆心和半径------*/
     double getSubPixelLength(const std::vector<cv::Point>& contour, const cv::Mat& gray_pic);
+    /*------获取当前纳秒时间------*/
+    long getTimeNs();
 public:
     EdgeDetector();
     EdgeDetector(const cv::Mat& input_pic, int bin_threshold);

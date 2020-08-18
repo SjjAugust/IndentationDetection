@@ -1326,6 +1326,16 @@ D:/opencv-3.4.11/modules/videostab/include/opencv2/videostab/opencv2/videostab/g
 opencv2/videostab/log.hpp
 D:/opencv-3.4.11/modules/videostab/include/opencv2/videostab/opencv2/videostab/log.hpp
 
+E:/Repositories/IndentationDetection/src/Calibrator.h
+opencv2/opencv.hpp
+-
+string
+-
+climits
+-
+cmath
+-
+
 E:/Repositories/IndentationDetection/src/EdgeDetector.cpp
 EdgeDetector.h
 E:/Repositories/IndentationDetection/src/EdgeDetector.h
@@ -1345,4 +1355,28 @@ climits
 -
 cstdlib
 -
+thread
+-
+mutex
+-
+sys/time.h
+-
+sstream
+-
+utility
+-
+
+E:/Repositories/IndentationDetection/src/main.cpp
+iostream
+-
+EdgeDetector.h
+E:/Repositories/IndentationDetection/src/EdgeDetector.h
+string
+-
+vector
+-
+io.h
+-
+Calibrator.h
+E:/Repositories/IndentationDetection/src/Calibrator.h
 

@@ -4,6 +4,8 @@
 
 #include "EdgeDetector.h"
 
+std::vector<std::pair<cv::Vec3d, EdgeDetector::Goodness>> EdgeDetector::compare_info; 
+
 EdgeDetector::EdgeDetector(const cv::Mat& input_pic, int bin_threshold)
 : BINARYZATION_THRESHOLD(bin_threshold){
     ori_pic_ = input_pic.clone();
@@ -113,7 +115,7 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
     int count = 0;
     for(int i = 0; i < area.size(); i++){
         std::cout << "the " << i << "circumference is:" << all_contours_vec[area[i]["idx"]].size() << std::endl;
-        if(count == 2){
+        if(count == hole_num){
             break;
         }
         if(all_contours_vec[area[i]["idx"]].size() > MIN_CONTOURS_LENGTH &&
@@ -128,8 +130,7 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
         // double axis1 = rrt.size.width, axis2 = rrt.size.height;
         // double r = (axis1 + axis2) / 4;
         // cv::Point center = rrt.center;
-
-        cv::Vec3d circle_info = getCircleByRANSAC(all_contours_vec[area[i]["idx"]], 5000, 0.95, bin_mat.size());
+        cv::Vec3d circle_info = getCircleByRANSAC(all_contours_vec[area[i]["idx"]], 1000, 0.95, bin_mat.size());
         cv::Point center(circle_info[0], circle_info[1]);
         double r = circle_info[2];
 
@@ -155,7 +156,7 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
         center_vec.push_back(center);
     }
     cv::imwrite("../pic/process/step5.jpg", canvas);
-    cv::imwrite("../pic/preocess/step3_1.jpg", bin_canvas);
+    cv::imwrite("../pic/process/step3_1.jpg", bin_canvas);
     return ret;
 }
 
@@ -553,7 +554,6 @@ cv::Vec3d EdgeDetector::calCircleByThreePoints(const cv::Point &p1, const cv::Po
 }
 
 cv::Vec3d EdgeDetector::getCircleByRANSAC(const std::vector<cv::Point> &contour, int cycle_num, double threshold, const cv::Size &canvas_size){
-    int size = contour.size();
     int count = 0;
     struct best
     {
@@ -562,53 +562,101 @@ cv::Vec3d EdgeDetector::getCircleByRANSAC(const std::vector<cv::Point> &contour,
     };
     
     best best_circle_info;
-    while (count++ < cycle_num){ 
-        std::vector<int> point_choose;
-        for(int i = 0; i < 3; i++){
-            int index = rand() % size;
-            for(int j = 0; j < point_choose.size(); j++){
-                if(index == point_choose[j]){
-                    index = rand() % size;
-                    j = 0;
+    while (count < cycle_num){ 
+        
+        compare_info = std::vector<std::pair<cv::Vec3d, EdgeDetector::Goodness>>();
+        std::thread thread1(&EdgeDetector::processCalculation, this, contour, std::ref(count), std::ref(canvas_size));
+        std::thread thread2(&EdgeDetector::processCalculation, this, contour, std::ref(count), canvas_size);
+        std::thread thread3(&EdgeDetector::processCalculation, this, contour, std::ref(count), canvas_size);
+        std::thread thread4(&EdgeDetector::processCalculation, this, contour, std::ref(count), canvas_size);
+        thread1.join();
+        thread2.join();
+        thread3.join();
+        thread4.join();
+        // std::cout << "compare_info size:"<< compare_info.size() << std::endl;
+        for(int i = 0; i < compare_info.size(); i++){
+            cv::Vec3d circle_info = compare_info[i].first;
+            Goodness circle_goodness = compare_info[i].second;
+            if(circle_goodness.rate == 1){
+                std::cout << circle_info[0] << " " << circle_info[1] << " " << circle_info[2] << std::endl;
+                for(auto p : contour){
+                    double d = calDistance(cv::Point(circle_info[0],circle_info[1]), p);
+                    std::cout << d << std::endl;
                 }
             }
-            point_choose.push_back(index);
-        }
-        cv::Vec3d circle_info = calCircleByThreePoints(contour[point_choose[0]], contour[point_choose[1]], contour[point_choose[2]]);
-        bool step_to_next = false;
-        for(auto p : contour){
-            double d = calDistance(cv::Point(circle_info[0], circle_info[1]), p);
-            if(d <= 3.0){
-                step_to_next = true;
+            if(circle_goodness.rate > best_circle_info.rate){
+                // std::cout << "i am here!" << std::endl;
+                best_circle_info.circle = circle_info;
+                best_circle_info.rate = circle_goodness.rate;
+            }
+            if(circle_goodness.rate > threshold){
+                break;
             }
         }
-        if(step_to_next){
-            continue;
-        }
-        Goodness goodness = calGoodnessOfFit(contour, circle_info, canvas_size);
-        std::cout << "the " << count << " turn, rate:" << goodness.rate << std::endl; 
-        if(goodness.rate == 1){
-            std::cout << circle_info[0] << " " << circle_info[1] << " " << circle_info[2] << std::endl;
-            for(auto p : contour){
-                double d = calDistance(cv::Point(circle_info[0], circle_info[1]), p);
-                std::cout << d << std::endl;
-            }
-        }
-        if(goodness.rate > best_circle_info.rate){
-            best_circle_info.circle = circle_info;
-            best_circle_info.rate = goodness.rate;
-        }
-        if(goodness.rate > threshold){
-            break;
-        }
+        // std::cout << "best circle info" << best_circle_info.circle << "rate:" << best_circle_info.rate << std::endl;
+        
     }
     std::cin.get();
-    return best_circle_info.circle;
+    return best_circle_info.circle;    
+}
+
+void EdgeDetector::processCalculation(const std::vector<cv::Point> &contour, int &count, const cv::Size &canvas_size){
+    ransac_mutex.lock();
+    std::vector<cv::Point> contour_clone(contour);
+    cv::Size size_clone(canvas_size);
+    std::ostringstream oss;
+    oss << std::this_thread::get_id();
+    std::string thread_id = oss.str();
+    unsigned long long id = std::stoull(thread_id);
+    srand(getTimeNs() - id * 10);
+    // std::cout << getTimeNs() - id * 10 << std::endl;
+    ransac_mutex.unlock();
     
+    std::vector<int> point_choose;
+    for(int i = 0; i < 3; i++){
+        int index = rand() % contour_clone.size();
+        for(int j = 0; j < point_choose.size(); j++){
+            if(index == point_choose[j]){
+                index = rand() % contour_clone.size();
+                j = 0;
+            }
+        }
+        point_choose.push_back(index);
+    }
+    cv::Vec3d circle_info = calCircleByThreePoints(contour_clone[point_choose[0]], contour_clone[point_choose[1]], contour_clone[point_choose[2]]);
+    Goodness goodness;
+    bool step_to_next = false;
+    for(auto p : contour){
+        double d = calDistance(cv::Point(circle_info[0], circle_info[1]), p);
+        if(d <= 3.0){
+            step_to_next = true;
+        }
+    }
+    if(step_to_next){
+        goodness.rate = 0;
+        goodness.sum_distance = INT64_MAX;
+        ransac_mutex.lock();
+        compare_info.push_back(std::make_pair(circle_info, goodness));
+        ransac_mutex.unlock();
+        return;
+    }
+    goodness = calGoodnessOfFit(contour_clone, circle_info, size_clone);
+    ransac_mutex.lock();
+    count++;
+    std::cout << "the " << count << " turn, rate:" << goodness.rate << std::endl; 
+    compare_info.push_back(std::make_pair(circle_info, goodness));
+    ransac_mutex.unlock();
 }
 
 void EdgeDetector::setPixelLength(double pix){
     this->pixel_length = pix;   
+}
+
+long EdgeDetector::getTimeNs(){
+    timespec ts;
+    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
+    return ts.tv_nsec;
+    
 }
 
 cv::Mat EdgeDetector::composePic(const std::vector<cv::Mat> &pics){

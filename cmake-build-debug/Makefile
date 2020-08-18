@@ -141,6 +141,33 @@ IndentationDetection/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\IndentationDetection.dir\build.make CMakeFiles/IndentationDetection.dir/build
 .PHONY : IndentationDetection/fast
 
+src/Calibrator.obj: src/Calibrator.cpp.obj
+
+.PHONY : src/Calibrator.obj
+
+# target to build an object file
+src/Calibrator.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\IndentationDetection.dir\build.make CMakeFiles/IndentationDetection.dir/src/Calibrator.cpp.obj
+.PHONY : src/Calibrator.cpp.obj
+
+src/Calibrator.i: src/Calibrator.cpp.i
+
+.PHONY : src/Calibrator.i
+
+# target to preprocess a source file
+src/Calibrator.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\IndentationDetection.dir\build.make CMakeFiles/IndentationDetection.dir/src/Calibrator.cpp.i
+.PHONY : src/Calibrator.cpp.i
+
+src/Calibrator.s: src/Calibrator.cpp.s
+
+.PHONY : src/Calibrator.s
+
+# target to generate assembly for a file
+src/Calibrator.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\IndentationDetection.dir\build.make CMakeFiles/IndentationDetection.dir/src/Calibrator.cpp.s
+.PHONY : src/Calibrator.cpp.s
+
 src/EdgeDetector.obj: src/EdgeDetector.cpp.obj
 
 .PHONY : src/EdgeDetector.obj
@@ -204,6 +231,9 @@ help:
 	@echo ... edit_cache
 	@echo ... rebuild_cache
 	@echo ... IndentationDetection
+	@echo ... src/Calibrator.obj
+	@echo ... src/Calibrator.i
+	@echo ... src/Calibrator.s
 	@echo ... src/EdgeDetector.obj
 	@echo ... src/EdgeDetector.i
 	@echo ... src/EdgeDetector.s

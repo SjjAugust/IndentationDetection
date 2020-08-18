@@ -4,6 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
+  "E:/Repositories/IndentationDetection/src/Calibrator.cpp" "E:/Repositories/IndentationDetection/cmake-build-debug/CMakeFiles/IndentationDetection.dir/src/Calibrator.cpp.obj"
   "E:/Repositories/IndentationDetection/src/EdgeDetector.cpp" "E:/Repositories/IndentationDetection/cmake-build-debug/CMakeFiles/IndentationDetection.dir/src/EdgeDetector.cpp.obj"
   "E:/Repositories/IndentationDetection/src/main.cpp" "E:/Repositories/IndentationDetection/cmake-build-debug/CMakeFiles/IndentationDetection.dir/src/main.cpp.obj"
   )

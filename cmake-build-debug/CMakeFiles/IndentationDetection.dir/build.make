@@ -75,10 +75,24 @@ include CMakeFiles/IndentationDetection.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/IndentationDetection.dir/flags.make
 
+CMakeFiles/IndentationDetection.dir/src/Calibrator.cpp.obj: CMakeFiles/IndentationDetection.dir/flags.make
+CMakeFiles/IndentationDetection.dir/src/Calibrator.cpp.obj: CMakeFiles/IndentationDetection.dir/includes_CXX.rsp
+CMakeFiles/IndentationDetection.dir/src/Calibrator.cpp.obj: ../src/Calibrator.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=E:\Repositories\IndentationDetection\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/IndentationDetection.dir/src/Calibrator.cpp.obj"
+	C:\TDM-GCC-64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles\IndentationDetection.dir\src\Calibrator.cpp.obj -c E:\Repositories\IndentationDetection\src\Calibrator.cpp
+
+CMakeFiles/IndentationDetection.dir/src/Calibrator.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/IndentationDetection.dir/src/Calibrator.cpp.i"
+	C:\TDM-GCC-64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E E:\Repositories\IndentationDetection\src\Calibrator.cpp > CMakeFiles\IndentationDetection.dir\src\Calibrator.cpp.i
+
+CMakeFiles/IndentationDetection.dir/src/Calibrator.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/IndentationDetection.dir/src/Calibrator.cpp.s"
+	C:\TDM-GCC-64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S E:\Repositories\IndentationDetection\src\Calibrator.cpp -o CMakeFiles\IndentationDetection.dir\src\Calibrator.cpp.s
+
 CMakeFiles/IndentationDetection.dir/src/EdgeDetector.cpp.obj: CMakeFiles/IndentationDetection.dir/flags.make
 CMakeFiles/IndentationDetection.dir/src/EdgeDetector.cpp.obj: CMakeFiles/IndentationDetection.dir/includes_CXX.rsp
 CMakeFiles/IndentationDetection.dir/src/EdgeDetector.cpp.obj: ../src/EdgeDetector.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=E:\Repositories\IndentationDetection\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/IndentationDetection.dir/src/EdgeDetector.cpp.obj"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=E:\Repositories\IndentationDetection\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/IndentationDetection.dir/src/EdgeDetector.cpp.obj"
 	C:\TDM-GCC-64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles\IndentationDetection.dir\src\EdgeDetector.cpp.obj -c E:\Repositories\IndentationDetection\src\EdgeDetector.cpp
 
 CMakeFiles/IndentationDetection.dir/src/EdgeDetector.cpp.i: cmake_force
@@ -92,7 +106,7 @@ CMakeFiles/IndentationDetection.dir/src/EdgeDetector.cpp.s: cmake_force
 CMakeFiles/IndentationDetection.dir/src/main.cpp.obj: CMakeFiles/IndentationDetection.dir/flags.make
 CMakeFiles/IndentationDetection.dir/src/main.cpp.obj: CMakeFiles/IndentationDetection.dir/includes_CXX.rsp
 CMakeFiles/IndentationDetection.dir/src/main.cpp.obj: ../src/main.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=E:\Repositories\IndentationDetection\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/IndentationDetection.dir/src/main.cpp.obj"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=E:\Repositories\IndentationDetection\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/IndentationDetection.dir/src/main.cpp.obj"
 	C:\TDM-GCC-64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles\IndentationDetection.dir\src\main.cpp.obj -c E:\Repositories\IndentationDetection\src\main.cpp
 
 CMakeFiles/IndentationDetection.dir/src/main.cpp.i: cmake_force
@@ -105,12 +119,14 @@ CMakeFiles/IndentationDetection.dir/src/main.cpp.s: cmake_force
 
 # Object files for target IndentationDetection
 IndentationDetection_OBJECTS = \
+"CMakeFiles/IndentationDetection.dir/src/Calibrator.cpp.obj" \
 "CMakeFiles/IndentationDetection.dir/src/EdgeDetector.cpp.obj" \
 "CMakeFiles/IndentationDetection.dir/src/main.cpp.obj"
 
 # External object files for target IndentationDetection
 IndentationDetection_EXTERNAL_OBJECTS =
 
+IndentationDetection.exe: CMakeFiles/IndentationDetection.dir/src/Calibrator.cpp.obj
 IndentationDetection.exe: CMakeFiles/IndentationDetection.dir/src/EdgeDetector.cpp.obj
 IndentationDetection.exe: CMakeFiles/IndentationDetection.dir/src/main.cpp.obj
 IndentationDetection.exe: CMakeFiles/IndentationDetection.dir/build.make
@@ -135,7 +151,7 @@ IndentationDetection.exe: D:/OpenCV/mingw_build/lib/libopencv_world3411.dll.a
 IndentationDetection.exe: CMakeFiles/IndentationDetection.dir/linklibs.rsp
 IndentationDetection.exe: CMakeFiles/IndentationDetection.dir/objects1.rsp
 IndentationDetection.exe: CMakeFiles/IndentationDetection.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=E:\Repositories\IndentationDetection\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX executable IndentationDetection.exe"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=E:\Repositories\IndentationDetection\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX executable IndentationDetection.exe"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles\IndentationDetection.dir\link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
