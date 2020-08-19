@@ -149,7 +149,7 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
 
         cv::circle(canvas, center, (int)r, cv::Scalar(255, 0, 0), 3);
         cv::circle(bin_canvas, center, (int)r, cv::Scalar(255, 0, 0), 3);
-        cv::circle(ret, center, (int)r, cv::Scalar(0, 0, 255), 3);
+        cv::circle(ret, center, (int)r, cv::Scalar(0, 0, 255), 1);
 //        cv::ellipse(ret, rrt, cv::Scalar(0 ,0 ,255), 1);
         std::cout << "hole" << i << "'s radius: " << r << std::endl;
         radius.push_back(r);
