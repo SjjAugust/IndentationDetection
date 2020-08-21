@@ -39,6 +39,10 @@ void EdgeDetector::preProcess(const cv::Size& gauss_kernel_size) {
 
 cv::Mat EdgeDetector::detectEdge() {
 //    cv::adaptiveThreshold(dst_pic_, dst_pic_, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 11, 2);
+    if(BINARYZATION_THRESHOLD == 0){
+        BINARYZATION_THRESHOLD = getAdaptiveThreshold(dst_pic_, PIXEL_AROUND_THRESHOLD, PIXEL_NEIGHBOUR);
+        // std::cout << "threashold:" << BINARYZATION_THRESHOLD << std::endl;
+    }
     cv::threshold(dst_pic_, dst_pic_, BINARYZATION_THRESHOLD, 255, cv::THRESH_BINARY);
     cv::imwrite("../pic/process/step1.jpg", dst_pic_);
     cv::medianBlur(dst_pic_, dst_pic_, 9);
@@ -130,7 +134,7 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
         // double axis1 = rrt.size.width, axis2 = rrt.size.height;
         // double r = (axis1 + axis2) / 4;
         // cv::Point center = rrt.center;
-        cv::Vec3d circle_info = getCircleByRANSAC(all_contours_vec[area[i]["idx"]], 1000, 0.95, bin_mat.size());
+        cv::Vec3d circle_info = getCircleByRANSAC(all_contours_vec[area[i]["idx"]], 3000, 0.95, bin_mat.size());
         cv::Point center(circle_info[0], circle_info[1]);
         double r = circle_info[2];
 
@@ -144,7 +148,7 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
                 }
             }
         }
-        Goodness goodness = calGoodnessOfFit(all_contours_vec[area[i]["idx"]], aft_contour);
+        Goodness goodness = calGoodnessOfFit(all_contours_vec[area[i]["idx"]], aft_contour, circle_info, 1);
         std::cout << "sum distance:" << goodness.sum_distance << std::endl << "rate:" << goodness.rate << std::endl;
 
         cv::circle(canvas, center, (int)r, cv::Scalar(255, 0, 0), 3);
@@ -484,34 +488,55 @@ bool EdgeDetector::adaptContrastEnhancement(cv::Mat &scr, cv::Mat &dst, int winS
     return true;
 }
 
-EdgeDetector::Goodness EdgeDetector::calGoodnessOfFit(const std::vector<cv::Point> &ori_contour, const std::vector<cv::Point> &aft_contour){
-    double sum = 0;
-    int count = 0;
-    for(auto p : aft_contour){
-        double min_distance = INT64_MAX;
-        for(auto ori_p : ori_contour){
-            double d = calDistance(p, ori_p);
-            if(d < min_distance){
-                min_distance = d;
-            } 
+EdgeDetector::Goodness EdgeDetector::calGoodnessOfFit(const std::vector<cv::Point> &ori_contour, const std::vector<cv::Point> &aft_contour, const cv::Vec3d &circle_info, int type){
+    if(type == 0){
+        double sum = 0.;
+        int count = 0;
+        for(auto p : aft_contour){
+            double min_distance = INT64_MAX;
+            for(auto ori_p : ori_contour){
+                double d = calDistance(p, ori_p);
+                if(d < min_distance){
+                    min_distance = d;
+                } 
+            }
+            if(min_distance == INT64_MAX){
+                std::cout << "未找到最小值??" << std::endl;
+                sum += 0;
+            } else{
+                    sum += min_distance;
+            }
+            if(min_distance < 3) {
+                count++;
+            }
         }
-        if(min_distance == INT64_MAX){
-            std::cout << "未找到最小值??" << std::endl;
-            sum += 0;
-        } else{
-                sum += min_distance;
+        double rate;
+        if(aft_contour.size() == 0){
+            rate = 0;
+        } else {
+            rate = (double)count / aft_contour.size();
         }
-        if(min_distance < 3) {
-            count++;
+        return {sum, rate, count, aft_contour.size()};
+    } else if(type == 1){
+        double sum = 0.;
+        int count = 0;
+        double rate = 0.;
+        for(auto p : ori_contour){
+            double distance = calDistance(p, cv::Point(circle_info[0], circle_info[1]));
+            if(fabs(distance - circle_info[2]) < 1.){
+                count++;
+            }
         }
+        if(circle_info[2] < MIN_RADIUS || circle_info[2] > MAX_RADIUS){
+            rate = 0.;
+            count = 0;
+        } else {
+            rate = (double)count / ori_contour.size();
+        }
+        return {sum, rate, count, ori_contour.size()};
+        
     }
-    double rate;
-    if(aft_contour.size() == 0){
-        rate = 0;
-    } else {
-        rate = (double)count / aft_contour.size();
-    }
-    return {sum, rate};
+    
 }
 
 EdgeDetector::Goodness EdgeDetector::calGoodnessOfFit(const std::vector<cv::Point> &ori_contour, const cv::Vec3d &circle_info, const cv::Size &canvas_size){
@@ -527,7 +552,7 @@ EdgeDetector::Goodness EdgeDetector::calGoodnessOfFit(const std::vector<cv::Poin
                 }
             }
         }
-        return calGoodnessOfFit(ori_contour, aft_contour);
+        return calGoodnessOfFit(ori_contour, aft_contour, circle_info, 1);
 }
 
 cv::Vec3d EdgeDetector::calCircleByThreePoints(const cv::Point &p1, const cv::Point &p2, const cv::Point &p3){
@@ -562,10 +587,11 @@ cv::Vec3d EdgeDetector::getCircleByRANSAC(const std::vector<cv::Point> &contour,
     };
     
     best best_circle_info;
+    int max_inliners = 0;
     while (count < cycle_num){ 
         
         compare_info = std::vector<std::pair<cv::Vec3d, EdgeDetector::Goodness>>();
-        std::thread thread1(&EdgeDetector::processCalculation, this, contour, std::ref(count), std::ref(canvas_size));
+        std::thread thread1(&EdgeDetector::processCalculation, this, contour, std::ref(count), canvas_size);
         std::thread thread2(&EdgeDetector::processCalculation, this, contour, std::ref(count), canvas_size);
         std::thread thread3(&EdgeDetector::processCalculation, this, contour, std::ref(count), canvas_size);
         std::thread thread4(&EdgeDetector::processCalculation, this, contour, std::ref(count), canvas_size);
@@ -592,10 +618,14 @@ cv::Vec3d EdgeDetector::getCircleByRANSAC(const std::vector<cv::Point> &contour,
             if(circle_goodness.rate > threshold){
                 break;
             }
+            if(circle_goodness.inliners > MAX(max_inliners, 2)){
+                cycle_num = updateNumIters(confidence, (double)(circle_goodness.total - circle_goodness.inliners) / circle_goodness.total, 3, cycle_num);
+            }
         }
         // std::cout << "best circle info" << best_circle_info.circle << "rate:" << best_circle_info.rate << std::endl;
         
     }
+    std::cout << "finish" << std::endl;
     std::cin.get();
     return best_circle_info.circle;    
 }
@@ -626,15 +656,14 @@ void EdgeDetector::processCalculation(const std::vector<cv::Point> &contour, int
     cv::Vec3d circle_info = calCircleByThreePoints(contour_clone[point_choose[0]], contour_clone[point_choose[1]], contour_clone[point_choose[2]]);
     Goodness goodness;
     bool step_to_next = false;
-    for(auto p : contour){
-        double d = calDistance(cv::Point(circle_info[0], circle_info[1]), p);
-        if(d <= 3.0){
-            step_to_next = true;
-        }
+    if(circle_info[2] < MIN_RADIUS || circle_info[2] > MAX_RADIUS){
+        step_to_next = true;
     }
     if(step_to_next){
         goodness.rate = 0;
         goodness.sum_distance = INT64_MAX;
+        goodness.inliners = 0;
+        goodness.total = 0;
         ransac_mutex.lock();
         compare_info.push_back(std::make_pair(circle_info, goodness));
         ransac_mutex.unlock();
@@ -646,6 +675,24 @@ void EdgeDetector::processCalculation(const std::vector<cv::Point> &contour, int
     std::cout << "the " << count << " turn, rate:" << goodness.rate << std::endl; 
     compare_info.push_back(std::make_pair(circle_info, goodness));
     ransac_mutex.unlock();
+}
+
+int EdgeDetector::updateNumIters(double p, double ep, int model_points, int max_iters){
+    
+    p = MAX(p, 0);
+    p = MIN(p, 1);
+    ep = MAX(ep, 0);
+    ep = MIN(ep, 1);
+
+    double num = MAX(1. - p, DBL_MIN);
+    double denom = 1. - pow(1. - ep, model_points);
+    if(denom < DBL_MIN){
+        return 0;
+    }
+    num = log(num);
+    denom = log(denom);
+    
+    return denom >= 0 || -num >= max_iters * (-denom) ? max_iters : round(num/denom);
 }
 
 void EdgeDetector::setPixelLength(double pix){
@@ -673,4 +720,111 @@ cv::Mat EdgeDetector::composePic(const std::vector<cv::Mat> &pics){
     cv::waitKey(0);
     return ret.clone();
 
+}
+
+double EdgeDetector::calProbability(const cv::Mat &hist, int index){
+    double sum = 0;
+    for(int i = 0; i < hist.rows; i++){
+        sum += hist.at<float>(i, 0);
+    }
+    return (double)hist.at<float>(index, 0) / sum;
+}
+
+double EdgeDetector::calEntropy(const cv::Mat &hist, int begin, int end){
+    double total_probablity = 0.;
+    for(int i = begin; i <= end; i++){
+        total_probablity += calProbability(hist, i);
+    }
+    double entropy = 0;
+    for(int i = begin; i <= end; i++){
+        double pro = calProbability(hist, i);
+        pro /= total_probablity;
+        if(pro == 0){
+            continue;
+        }
+        // std::cout << "total:" << pro << std::endl;
+        entropy += -pro * log(pro);
+    }
+    return entropy;
+}
+
+int EdgeDetector::getKswThreshold(const cv::Mat &pic){
+    int channels[] = {0};
+    int bin_num[] = {256};
+    float range[] = {0, 256};
+    const float *ranges[] = {range};
+    cv::Mat hist;
+    cv::Mat p = pic.clone();
+    cv::calcHist(&p, 1, channels, cv::Mat(), hist, 1, bin_num, ranges);
+    int max = 0, max_index;
+    for(int i = 30; i < hist.rows-30; i++){
+       if(hist.at<int>(i, 0) > max){
+           max = hist.at<int>(i, 0);
+           max_index = i;
+       }
+    }
+    
+    std::cout << "hist" << hist << std::endl;
+    int threshold = 0;
+    double max_entropy = 0;
+    for(int i = 0; i < 255; i++){
+        double entropy = calEntropy(hist, 0, i) + calEntropy(hist, i+1, 255);
+        // std::cout << "entropy:" << entropy << std::endl;
+        if(entropy > max_entropy){
+            threshold = i;
+            max_entropy = entropy;
+        }
+    }
+    threshold = max_index / 3;
+    return threshold;
+
+}
+
+int EdgeDetector::getAdaptiveThreshold(const cv::Mat &pic, const int around_threshold, const int neigbour){
+    int channels[] = {0};
+    int bin_num[] = {256};
+    float range[] = {0, 256};
+    const float *ranges[] = {range};
+    cv::Mat hist;
+    // cv::Mat p = pic.clone();
+    cv::calcHist(&pic, 1, channels, cv::Mat(), hist, 1, bin_num, ranges);
+    std::vector<int> choose_threshold;
+
+    int max_idx = 0;
+    float max_num = 0;
+    for(int i = 0; i < 200; i++){
+        if(hist.at<float>(i, 0) > max_num){
+            max_idx = i;
+            max_num = hist.at<float>(i, 0);
+        }
+    }
+    std::cout << "max_idx:" << max_idx << std::endl;
+
+    for(int i = 0; i <= max_idx; i++){
+        if(hist.at<float>(i, 0) >= around_threshold-neigbour && hist.at<float>(i, 0) <= around_threshold+neigbour){
+            choose_threshold.push_back(i);
+        }
+    }
+    std::cout << choose_threshold.size() << std::endl;
+    for(auto p : choose_threshold){
+        std::cout << "choose_threshold:" << p << std::endl;
+    }
+    std::vector<int>::iterator min_val = std::min_element(choose_threshold.begin(), choose_threshold.end());
+    std::vector<int>::iterator max_val = std::max_element(choose_threshold.begin(), choose_threshold.end());
+    double th, min_error =  DBL_MAX;
+    for(int i = *min_val; i < *max_val; i++){
+        double error = 0;
+        if(std::find(choose_threshold.begin(), choose_threshold.end(), i) != choose_threshold.end()){
+            for(auto p : choose_threshold){
+                error += abs(i - p);
+            }
+            if(error < min_error){
+                th = i;
+                min_error = error;
+            }
+        }
+    }
+    std::cout << "adaptive threshold:" << th << std::endl;
+    std::cin.get();
+    return th;
 }

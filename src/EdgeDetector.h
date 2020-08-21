@@ -25,16 +25,23 @@ private:
     cv::Mat ori_pic_;
     cv::Mat dst_pic_;
     std::vector<cv::Mat> input_pics;
-    static const int MAX_CONTOURS_LENGTH = 99650;
-    static const int MIN_CONTOURS_LENGTH = 2000;
+    const int MAX_CONTOURS_LENGTH = 99650;
+    const int MIN_CONTOURS_LENGTH = 2000;
     int BINARYZATION_THRESHOLD = 138;
     const double MAX_AREA = 99999999;
     const double MIN_AREA = 100000;
+    const int MIN_RADIUS = 300;
+    const int MAX_RADIUS = 600;
+    const double confidence = 0.999999;
+    const int PIXEL_AROUND_THRESHOLD = 15000;
+    const int PIXEL_NEIGHBOUR = 5000;
     bool MULTIPLE_INPUT;
     struct Goodness
     {
         double sum_distance = 0;
         double rate = 0;
+        int inliners = 0;
+        unsigned long long total = 0;
     };
     double pixel_length = 0;
     std::mutex ransac_mutex;
@@ -48,7 +55,9 @@ private:
     static bool compare(std::map<std::string, double> map1, std::map<std::string, double> map2);
     static void imfill(cv::Mat& mat);
     cv::Mat composePic(const std::vector<cv::Mat> &pics);
-    Goodness calGoodnessOfFit(const std::vector<cv::Point> &ori_contour, const std::vector<cv::Point> &aft_contour);
+    /*type == 0:用拟合后坐标计算拟合度，circle_info可以填null
+      type == 1:用原始坐标计算拟合度，aft_contour可以填null*/
+    Goodness calGoodnessOfFit(const std::vector<cv::Point> &ori_contour, const std::vector<cv::Point> &aft_contour, const cv::Vec3d &circle_info, int type);
     Goodness calGoodnessOfFit(const std::vector<cv::Point> &ori_contour, const cv::Vec3d &circle_info, const cv::Size &canvas_size);
     /*------对比度提升相关------*/
     bool getVarianceMean(cv::Mat &scr, cv::Mat &meansDst, cv::Mat &varianceDst, int winSize);
@@ -58,10 +67,17 @@ private:
     cv::Vec3d calCircleByThreePoints(const cv::Point &p1, const cv::Point &p2, const cv::Point &p3);
     cv::Vec3d getCircleByRANSAC(const std::vector<cv::Point> &contour, int cycle_num, double threshold, const cv::Size &canvas_size);
     void processCalculation(const std::vector<cv::Point> &contour, int &count, const cv::Size &canvas_size);
+    int updateNumIters(double p, double ep, int model_points, int max_iters);
     /*------根据三点计算圆心和半径------*/
     double getSubPixelLength(const std::vector<cv::Point>& contour, const cv::Mat& gray_pic);
     /*------获取当前纳秒时间------*/
     long getTimeNs();
+    /*------自适应阈值相关------*/
+    double calEntropy(const cv::Mat &hist, int begin, int end);
+    double calProbability(const cv::Mat &hist, int index);
+    int getKswThreshold(const cv::Mat &pic);
+    int getAdaptiveThreshold(const cv::Mat &pic, const int around_threshold, const int neigbour);
+
 public:
     EdgeDetector();
     EdgeDetector(const cv::Mat& input_pic, int bin_threshold);
