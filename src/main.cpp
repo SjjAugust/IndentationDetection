@@ -54,29 +54,31 @@ int main(int argc, char *argv[]) {
     case CAL_DIAM_FIT:
     {
         std::string read_status = argv[2];
+        std::string input_path = argv[3];
         int bin_threshold = std::stoi(argv[4]);
-        double pixel_len = std::stod(argv[5]);
+        int pixel_around_threshold = std::stoi(argv[5]);
+        int pixel_neighbour = std::stoi(argv[6]);
+        double pixel_len = std::stod(argv[7]);
+        int min_radius = std::stoi(argv[8]);
+        int max_radius = std::stoi(argv[9]);
+        EdgeDetector::para = {min_radius, max_radius, 0, 0, 0, 0, pixel_around_threshold, pixel_neighbour, bin_threshold, pixel_len};
         EdgeDetector *edgedetector;
         if(read_status == "dic"){
-            std::string dic_path = argv[3];
             std::vector<std::string> file_abs_path;
-            getFiles(dic_path, file_abs_path);
+            getFiles(input_path, file_abs_path);
             std::vector<cv::Mat> input_pics;
             for(auto path : file_abs_path){
                 cv::Mat temp = cv::imread(path);
                 input_pics.push_back(temp);
             }
             std::cout << "the amount of pictures:" << input_pics.size() << std::endl;
-            edgedetector = new EdgeDetector(input_pics, bin_threshold);
+
+            edgedetector = new EdgeDetector(input_pics);
 
         } else if(read_status == "file"){
-            std::string file_path = argv[3];
-            cv::Mat input_mat3 = cv::imread(file_path);
-            edgedetector = new EdgeDetector(input_mat3, bin_threshold);
+            cv::Mat input_mat3 = cv::imread(input_path);
+            edgedetector = new EdgeDetector(input_mat3);
         }
-        edgedetector->setPixelLength(pixel_len);
-        std::cout << "pixel_len:" << pixel_len << std::endl;
-        std::cin.get();
         std::vector<double> radius;
         std::vector<cv::Point> center;
         cv::Mat res = edgedetector->findHoleByBinaryzation(cv::Size(15, 15), 1, radius, center);
@@ -93,29 +95,30 @@ int main(int argc, char *argv[]) {
     case CAL_DIAM_SUBPIXEL:
     {
         std::string read_status = argv[2];
+        std::string input_path = argv[3];
         int bin_threshold = std::stoi(argv[4]);
-        double pixel_len = std::stod(argv[5]);
+        int pixel_around_threshold = std::stoi(argv[5]);
+        int pixel_neighbour = std::stoi(argv[6]);
+        double pixel_len = std::stod(argv[7]);
+        int min_radius = std::stoi(argv[8]);
+        int max_radius = std::stoi(argv[9]);
+        EdgeDetector::para = {min_radius, max_radius, 0, 0, 0, 0, pixel_around_threshold, pixel_neighbour, bin_threshold, pixel_len};
         EdgeDetector *edgedetector;
         if(read_status == "dic"){
-            std::string dic_path = argv[3];
             std::vector<std::string> file_abs_path;
-            getFiles(dic_path, file_abs_path);
+            getFiles(input_path, file_abs_path);
             std::vector<cv::Mat> input_pics;
             for(auto path : file_abs_path){
                 cv::Mat temp = cv::imread(path);
                 input_pics.push_back(temp);
             }
             std::cout << "the amount of pictures:" << input_pics.size() << std::endl;
-            edgedetector = new EdgeDetector(input_pics, bin_threshold);
+            edgedetector = new EdgeDetector(input_pics);
 
         } else if(read_status == "file"){
-            std::string file_path = argv[3];
-            cv::Mat input_mat3 = cv::imread(file_path);
-            edgedetector = new EdgeDetector(input_mat3, bin_threshold);
+            cv::Mat input_mat3 = cv::imread(input_path);
+            edgedetector = new EdgeDetector(input_mat3);
         }
-        edgedetector->setPixelLength(pixel_len);
-        std::cout << "pixel_len:" << pixel_len << std::endl;
-        std::cin.get();
         std::vector<double> diam;
         std::vector<cv::Point> center;
         cv::Mat res = edgedetector->findHoleSubPixel(cv::Size(15, 15), 1, diam, center);

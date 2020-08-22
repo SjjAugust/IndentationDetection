@@ -5,15 +5,16 @@
 #include "EdgeDetector.h"
 
 std::vector<std::pair<cv::Vec3d, EdgeDetector::Goodness>> EdgeDetector::compare_info; 
+EdgeDetector::parameter EdgeDetector::para;
 
-EdgeDetector::EdgeDetector(const cv::Mat& input_pic, int bin_threshold)
-: BINARYZATION_THRESHOLD(bin_threshold){
+EdgeDetector::EdgeDetector(const cv::Mat& input_pic){
+    setParameter();
     ori_pic_ = input_pic.clone();
     MULTIPLE_INPUT = false;
 }
 
-EdgeDetector::EdgeDetector(const std::vector<cv::Mat>& input_pics, int bin_threshold)
-: BINARYZATION_THRESHOLD(bin_threshold){
+EdgeDetector::EdgeDetector(const std::vector<cv::Mat>& input_pics){
+    setParameter();
     this->input_pics = std::vector<cv::Mat>(input_pics);
     MULTIPLE_INPUT = true;
 }
@@ -342,7 +343,7 @@ double EdgeDetector::calibrationByCoin(const cv::Mat &coin_pic, double length) {
         std::cout << "图像读取错误" << std::endl;
         return -1;
     }
-    double pixel_length = 0;
+    double PIXEL_LENGTH = 0;
     cv::Mat pic = coin_pic.clone();
     cv::cvtColor(pic, pic, cv::COLOR_BGR2GRAY);
     cv::medianBlur(pic, pic, 9);
@@ -367,13 +368,13 @@ double EdgeDetector::calibrationByCoin(const cv::Mat &coin_pic, double length) {
     double diam = (axis1 + axis2) / 2;
     // cv::Vec3d circle_info = getCircleByRANSAC(contours[area[0]["idx"]], 500, 0.95, coin_pic.size());
     // double diam = circle_info[2] * 2;
-    pixel_length = length / diam;
+    PIXEL_LENGTH = length / diam;
     // cv::Point center(circle_info[0], circle_info[1]);
     cv::Point center = rrt.center;
     cv::circle(coin_pic, center, (int)diam/2, cv::Scalar(0, 0, 255), 1);
     cv::imwrite("../pic/process/coin.jpg", coin_pic);
-    this->pixel_length = pixel_length;
-    return pixel_length;
+    this->PIXEL_LENGTH = PIXEL_LENGTH;
+    return PIXEL_LENGTH;
 }
 
 void EdgeDetector::imfill(cv::Mat &mat) {
@@ -695,10 +696,6 @@ int EdgeDetector::updateNumIters(double p, double ep, int model_points, int max_
     return denom >= 0 || -num >= max_iters * (-denom) ? max_iters : round(num/denom);
 }
 
-void EdgeDetector::setPixelLength(double pix){
-    this->pixel_length = pix;   
-}
-
 long EdgeDetector::getTimeNs(){
     timespec ts;
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
@@ -827,4 +824,28 @@ int EdgeDetector::getAdaptiveThreshold(const cv::Mat &pic, const int around_thre
     std::cout << "adaptive threshold:" << th << std::endl;
     std::cin.get();
     return th;
+}
+
+void EdgeDetector::setParameter(){
+    MIN_RADIUS = para.min_radius;
+    MAX_RADIUS = para.max_radius;
+    MIN_CONTOURS_LENGTH = round(2 * PI * MIN_RADIUS);
+    MAX_CONTOURS_LENGTH = round(2 * PI * MAX_RADIUS);
+    MIN_AREA = round(pow(MIN_RADIUS, 2) * PI);
+    MAX_AREA = round(pow(MAX_RADIUS, 2) * PI);
+    PIXEL_AROUND_THRESHOLD = para.pixel_around_threshold;
+    PIXEL_NEIGHBOUR = para.pixel_neighbour;
+    BINARYZATION_THRESHOLD = para.binaryzation_threshold;
+    PIXEL_LENGTH = para.pixel_len;
+    std::cout << "para:"<< "\nmin radius:" << MIN_RADIUS
+        << "\nmax radius:" << MAX_RADIUS 
+        << "\nmin contours length:" << MIN_CONTOURS_LENGTH
+        << "\nmax contours length:" << MAX_CONTOURS_LENGTH
+        << "\nmin area:" << MIN_AREA
+        << "\nmax area:" << MAX_AREA
+        << "\npixel around threshold:" << PIXEL_AROUND_THRESHOLD
+        << "\npixel neighbour:" << PIXEL_NEIGHBOUR
+        << "\nbinaryzation threshold:" << BINARYZATION_THRESHOLD
+        << "\npixel_length:" << PIXEL_LENGTH << std::endl;
+        
 }

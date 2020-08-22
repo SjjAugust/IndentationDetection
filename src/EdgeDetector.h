@@ -25,16 +25,16 @@ private:
     cv::Mat ori_pic_;
     cv::Mat dst_pic_;
     std::vector<cv::Mat> input_pics;
-    const int MAX_CONTOURS_LENGTH = 99650;
-    const int MIN_CONTOURS_LENGTH = 2000;
+    int MAX_CONTOURS_LENGTH = 99650;
+    int MIN_CONTOURS_LENGTH = 2000;
     int BINARYZATION_THRESHOLD = 138;
-    const double MAX_AREA = 99999999;
-    const double MIN_AREA = 100000;
-    const int MIN_RADIUS = 300;
-    const int MAX_RADIUS = 600;
-    const double confidence = 0.999999;
-    const int PIXEL_AROUND_THRESHOLD = 15000;
-    const int PIXEL_NEIGHBOUR = 5000;
+    int MAX_AREA = 99999999;
+    int MIN_AREA = 100000;
+    int MIN_RADIUS = 300;
+    int MAX_RADIUS = 600;
+    double confidence = 0.999999;
+    int PIXEL_AROUND_THRESHOLD = 15000;
+    int PIXEL_NEIGHBOUR = 5000;
     bool MULTIPLE_INPUT;
     struct Goodness
     {
@@ -43,7 +43,7 @@ private:
         int inliners = 0;
         unsigned long long total = 0;
     };
-    double pixel_length = 0;
+    double PIXEL_LENGTH = 0;
     std::mutex ransac_mutex;
     static std::vector<std::pair<cv::Vec3d, EdgeDetector::Goodness>> compare_info; 
 
@@ -77,15 +77,28 @@ private:
     double calProbability(const cv::Mat &hist, int index);
     int getKswThreshold(const cv::Mat &pic);
     int getAdaptiveThreshold(const cv::Mat &pic, const int around_threshold, const int neigbour);
+    /*------设置参数------*/
+    void setParameter();
 
 public:
+    static struct parameter{
+        int min_radius = 0;
+        int max_radius = 0;
+        int min_contours_length = 0;
+        int max_contours_length = 0;
+        int min_area = 0;
+        int max_area = 0;
+        int pixel_around_threshold = 0;
+        int pixel_neighbour = 0;
+        int binaryzation_threshold = 0;
+        double pixel_len = 0;
+    } para;
     EdgeDetector();
-    EdgeDetector(const cv::Mat& input_pic, int bin_threshold);
-    EdgeDetector(const std::vector<cv::Mat>& input_pics, int bin_threshold);
+    EdgeDetector(const cv::Mat& input_pic);
+    EdgeDetector(const std::vector<cv::Mat>& input_pics);
     cv::Mat findHoleByBinaryzation(const cv::Size &gauss_kernel_size, int hole_num, std::vector<double>& radius, std::vector<cv::Point>& center_vec);
     cv::Mat findHoleSubPixel(const cv::Size &gauss_kernel_size, int hole_num, std::vector<double>& diam, std::vector<cv::Point>& center_vec);
     double calibrationByCoin(const cv::Mat& coin_pic, double length);
-    void setPixelLength(double pix);
 };
 
 
