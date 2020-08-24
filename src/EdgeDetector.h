@@ -53,6 +53,7 @@ private:
     const double calAngle(const cv::Point& p1, const cv::Point& p2);
     double calPointToLineDistance(const cv::Point& p0, const cv::Point& p1, const cv::Point& p2);
     static bool compare(std::map<std::string, double> map1, std::map<std::string, double> map2);
+    static bool compareC(std::map<std::string, double> map1, std::map<std::string, double> map2);
     static void imfill(cv::Mat& mat);
     cv::Mat composePic(const std::vector<cv::Mat> &pics);
     /*type == 0:用拟合后坐标计算拟合度，circle_info可以填null

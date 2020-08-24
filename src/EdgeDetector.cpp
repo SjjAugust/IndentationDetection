@@ -101,6 +101,7 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
     cv::cvtColor(bin_canvas, bin_canvas, cv::COLOR_GRAY2BGR);
     //对轮廓面积进行滤波，
     std::vector<std::map<std::string, double>> area;
+    std::vector<std::map<std::string, double>> circumference;
     for(int i = 0; i < all_contours_vec.size(); i++){
         double s = cv::contourArea(all_contours_vec[i]);
         if(s > MIN_AREA && s < MAX_AREA){
@@ -108,6 +109,10 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
             map["idx"] = i;
             map["area"] = s;
             area.push_back(map);
+            std::map<std::string, double> map_c;
+            map_c["idx"] = i;
+            map_c["circ"] = all_contours_vec[i].size();
+            circumference.push_back(map_c);
         } else {
             cv::drawContours(bin_mat, all_contours_vec, i, cv::Scalar(0), cv::FILLED);
         }
@@ -116,6 +121,7 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
     cv::imwrite("../pic/process/step4.jpg", bin_mat);
     //按照面积从大到小排序
     std::sort(area.begin(), area.end(), compare);
+    std::sort(circumference.begin(), circumference.end(), compareC);
     //对周长进行滤波
     int count = 0;
     for(int i = 0; i < area.size(); i++){
@@ -160,6 +166,16 @@ cv::Mat EdgeDetector::findHoleByBinaryzation(const cv::Size &gauss_kernel_size, 
         radius.push_back(r);
         center_vec.push_back(center);
     }
+    if(count == 0){
+        std::cout << "wrong parameters" << std::endl;
+        double change_radius = circumference[0]["circ"] / (double)(2 * PI);
+        std::cout << circumference[0]["circ"] << std::endl;
+        if(change_radius > MAX_RADIUS) {
+            std::cout << "max_radius is too small, please adjust to more than " << change_radius << std::endl;
+        } else if(change_radius < MIN_AREA) {
+            std::cout << "min_radius is too big, please adjust to less than " << change_radius << std::endl;
+        }
+    }
     cv::imwrite("../pic/process/step5.jpg", canvas);
     cv::imwrite("../pic/process/step3_1.jpg", bin_canvas);
     return ret;
@@ -198,7 +214,7 @@ cv::Mat EdgeDetector::findHoleSubPixel(const cv::Size &gauss_kernel_size, int ho
     int count = 0;
     for(int i = 0; i < area.size(); i++){
         std::cout << "the " << i << "circumference is:" << all_contours_vec[area[i]["idx"]].size() << std::endl;
-        if(count == 2){
+        if(count == hole_num){
             break;
         }
         if(all_contours_vec[area[i]["idx"]].size() > MIN_CONTOURS_LENGTH &&
@@ -336,6 +352,10 @@ double EdgeDetector::getSubPixelLength(const std::vector<cv::Point>& contour, co
 
 bool EdgeDetector::compare(std::map<std::string, double> map1, std::map<std::string, double> map2){
     return map1["area"] > map2["area"];
+}
+
+bool EdgeDetector::compareC(std::map<std::string, double> map1, std::map<std::string, double> map2){
+    return map1["circ"] > map2["circ"];
 }
 
 double EdgeDetector::calibrationByCoin(const cv::Mat &coin_pic, double length) {

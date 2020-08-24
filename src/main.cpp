@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
         cv::imwrite("../pic/process/x.jpg", res);
         std::cin.get();
     }
-        break;
+    break;
     default:
         break;
     }
