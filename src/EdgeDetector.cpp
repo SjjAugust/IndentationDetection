@@ -869,3 +869,36 @@ void EdgeDetector::setParameter(){
         << "\npixel_length:" << PIXEL_LENGTH << std::endl;
         
 }
+
+void EdgeDetector::testParameters(){
+    preProcess(cv::Size(15, 15));
+    if(BINARYZATION_THRESHOLD == 0){
+        std::cout << "binaryzation threshold can't be 0!" << std::endl;
+        return;
+    }
+    cv::namedWindow("after fill", cv::WINDOW_KEEPRATIO);
+    std::string input, last_input = nullptr;
+    int min_threshold = 0, max_threshold = 0, cur_threshold = 40;
+    while (true){
+        if(cur_threshold > 255){
+            std::cout << "over limit!" << std::endl;
+            break;
+        }
+        cv::threshold(dst_pic_, dst_pic_, cur_threshold, 255, cv::THRESH_BINARY);
+        cv::medianBlur(dst_pic_, dst_pic_, 9);
+        cv::bitwise_not(dst_pic_, dst_pic_);
+        imfill(dst_pic_);
+        cv::imshow("after fill", dst_pic_);
+        cv::waitKey(3000);
+        std::cin >> input;
+        if(input == "y"){
+            min_threshold = last_input == "n" ? cur_threshold - 5 : min_threshold;
+        }else if(input == "n"){
+            max_threshold = last_input == "y" ? cur_threshold - 5 : max_threshold;
+            break;
+        }
+        cur_threshold += 5;
+    }
+    std::cout << "min threshold:" << min_threshold << "\nmax threshold:" << max_threshold << std::endl;
+    
+}

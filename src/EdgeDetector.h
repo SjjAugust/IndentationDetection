@@ -17,6 +17,7 @@
 #include <sys/time.h>
 #include <sstream>
 #include <utility>
+
 #define PI acos(-1)
 
 
@@ -100,6 +101,7 @@ public:
     cv::Mat findHoleByBinaryzation(const cv::Size &gauss_kernel_size, int hole_num, std::vector<double>& radius, std::vector<cv::Point>& center_vec);
     cv::Mat findHoleSubPixel(const cv::Size &gauss_kernel_size, int hole_num, std::vector<double>& diam, std::vector<cv::Point>& center_vec);
     double calibrationByCoin(const cv::Mat& coin_pic, double length);
+    void testParameters();
 };
 
 

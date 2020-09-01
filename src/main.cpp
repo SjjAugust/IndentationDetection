@@ -10,7 +10,8 @@ enum operation {
     GEN_CALIBRATOR, 
     CALIBRATE,
     CAL_DIAM_FIT,
-    CAL_DIAM_SUBPIXEL
+    CAL_DIAM_SUBPIXEL,
+    TEST_PARAMETERS
 };
 int main(int argc, char *argv[]) {
     operation op;
@@ -23,6 +24,8 @@ int main(int argc, char *argv[]) {
         op = CAL_DIAM_FIT;
     }else if(argv1 == "cal_diam_subpixel"){
         op = CAL_DIAM_SUBPIXEL;
+    }else if(argv1 == "test_parameters"){
+        op = TEST_PARAMETERS;
     }
     switch (op)
     {
@@ -129,6 +132,11 @@ int main(int argc, char *argv[]) {
         }
         cv::imwrite("../pic/process/x.jpg", res);
         std::cin.get();
+    }
+    break;
+    case TEST_PARAMETERS:
+    {
+         
     }
     break;
     default:
